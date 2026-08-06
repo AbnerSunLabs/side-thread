@@ -1,0 +1,46 @@
+src/Providers/wereadProvider.ts
+  h_14565e8b179df6 169-170
+src/extension.ts
+  h_14565e8b179df6 4,96,102,108,113-114,119-120
+src/commands/commands.ts
+  h_14565e8b179df6 4,20,22
+src/Providers/baseWebviewProvider.ts
+  h_14565e8b179df6 124
+weread/src/App.tsx
+  h_14565e8b179df6 65-97,102-103,107-112,159,171-174,185-200,369-372,374,460-463,492-493,502,504,512,516,519,521-542,545
+  s_7c7a4d71dfde43::t_9c1c8c54859179 98-101,104-106,175,494-501,503,505-511,513-515,517-518,520
+src/core/musicStatusBar.ts
+  h_14565e8b179df6 5-6,8,36,39,63-64
+  s_7c7a4d71dfde43::t_87d8d54dbcda9a 1-4,65-67
+package.json
+  h_14565e8b179df6 5,12-13,22,147,195,197,223
+xiaoyuzhou/src/utils/index.ts
+  h_14565e8b179df6 4,6
+tsconfig.json
+  h_14565e8b179df6 17
+pnpm-workspace.yaml
+  h_14565e8b179df6 3,5
+pnpm-lock.yaml
+  s_7c7a4d71dfde43::t_9a8c5d80c7724a 164,176-177,207,5948-5949,6221
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "76add180c00107147e8966d8aaa889732681f9bb",
+  "prompts": {},
+  "humans": {
+    "h_14565e8b179df6": {
+      "author": "AbnerSun <sunjj11@chinatelecom.cn>"
+    }
+  },
+  "sessions": {
+    "s_7c7a4d71dfde43": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "c60fc494-12aa-4173-9afc-fc88f0efad5e",
+        "model": "unknown"
+      },
+      "human_author": "AbnerSun <sunjj11@chinatelecom.cn>"
+    }
+  }
+}
