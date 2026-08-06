@@ -1,0 +1,229 @@
+{
+	"publisher": "ylw",
+	"name": "touchfish",
+	"displayName": "TouchFish",
+	"description": "微信读书、小宇宙播客摸鱼插件",
+	"version": "17.9.1",
+	"icon": "logo.png",
+	"engines": {
+		"vscode": "^1.80.0"
+	},
+	"activationEvents": [
+		"onView:weread",
+		"onView:xiaoyuzhou"
+	],
+	"license": "SEE LICENSE IN LICENSE.txt",
+	"keywords": [
+		"摸鱼",
+		"xiaoyuzhou",
+		"小宇宙",
+		"播客",
+		"weread",
+		"微信读书"
+	],
+	"categories": [
+		"Other"
+	],
+	"main": "./dist/extension.js",
+	"contributes": {
+		"themes": [
+			{
+				"label": "ylw-dark-theme",
+				"uiTheme": "vs-dark",
+				"path": "./themes/ylw-dark-color-theme.json"
+			}
+		],
+		"configuration": {
+			"title": "touchfish",
+			"properties": {
+				"touchfish.showImg": {
+					"type": "boolean",
+					"default": true,
+					"description": "是否显示图片"
+				},
+				"touchfish.fontSize": {
+					"type": "number",
+					"default": 14,
+					"description": "全局字体大小"
+				},
+				"touchfish.xiaoyuzhouAccessToken": {
+					"type": "string",
+					"description": "小宇宙 Access Token (x-jike-access-token)"
+				},
+				"touchfish.xiaoyuzhouRefreshToken": {
+					"type": "string",
+					"description": "小宇宙 Refresh Token (x-jike-refresh-token)"
+				},
+				"touchfish.xiaoyuzhouUserInfo": {
+					"type": "string",
+					"default": "",
+					"description": "缓存的小宇宙用户信息 (JSON)"
+				},
+				"touchfish.xiaoyuzhouDeviceId": {
+					"type": "string",
+					"default": "",
+					"description": "小宇宙设备 ID"
+				},
+				"touchfish.xiaoyuzhouStatusBarShowLyric": {
+					"type": "boolean",
+					"default": true,
+					"description": "是否在状态栏显示小宇宙播客字幕(关闭则显示标题名)"
+				},
+				"touchfish.enableXiaoyuzhou": {
+					"type": "boolean",
+					"default": true,
+					"description": "启用小宇宙模块"
+				},
+				"touchfish.enableWeread": {
+					"type": "boolean",
+					"default": true,
+					"description": "启用微信读书模块"
+				},
+				"touchfish.wereadCookie": {
+					"type": "string",
+					"description": "微信读书 Cookie"
+				}
+			}
+		},
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "xiaoyuzhou",
+					"title": "TouchFish-Xiaoyuzhou",
+					"icon": "assets/xiaoyuzhou.svg",
+					"when": "config.touchfish.enableXiaoyuzhou"
+				},
+				{
+					"id": "weread",
+					"title": "TouchFish-Weread",
+					"icon": "assets/weread.svg",
+					"when": "config.touchfish.enableWeread"
+				}
+			]
+		},
+		"views": {
+			"xiaoyuzhou": [
+				{
+					"icon": "assets/xiaoyuzhou.svg",
+					"type": "webview",
+					"name": "小宇宙",
+					"id": "xiaoyuzhou",
+					"when": "config.touchfish.enableXiaoyuzhou"
+				}
+			],
+			"weread": [
+				{
+					"icon": "assets/weread.svg",
+					"type": "webview",
+					"name": "微信读书",
+					"id": "weread",
+					"when": "config.touchfish.enableWeread"
+				}
+			]
+		},
+		"commands": [
+			{
+				"command": "touchfish.openXiaoyuzhou",
+				"title": "打开小宇宙",
+				"icon": "$(radio-tower)"
+			},
+			{
+				"command": "touchfish.setXiaoyuzhouToken",
+				"title": "设置小宇宙凭据",
+				"icon": "$(settings-gear)"
+			},
+			{
+				"command": "touchfish.music.openActive",
+				"title": "打开当前播放器",
+				"icon": "$(play-circle)"
+			},
+			{
+				"command": "touchfish.music.playPause",
+				"title": "播放/暂停",
+				"icon": "$(play)"
+			},
+			{
+				"command": "touchfish.music.next",
+				"title": "下一集",
+				"icon": "$(chevron-right)"
+			},
+			{
+				"command": "touchfish.xiaoyuzhou.playPause",
+				"title": "播放/暂停",
+				"icon": "$(play)"
+			},
+			{
+				"command": "touchfish.xiaoyuzhou.nextEpisode",
+				"title": "下一集",
+				"icon": "$(chevron-right)"
+			},
+			{
+				"command": "touchfish.setWereadCookie",
+				"title": "设置微信读书Cookie",
+				"icon": "$(settings-gear)"
+			}
+		],
+		"menus": {
+			"view/title": [
+				{
+					"command": "touchfish.setXiaoyuzhouToken",
+					"when": "view == xiaoyuzhou",
+					"group": "navigation"
+				},
+				{
+					"command": "touchfish.setWereadCookie",
+					"when": "view == weread",
+					"group": "navigation"
+				}
+			]
+		}
+	},
+	"scripts": {
+		"vscode:prepublish": "pnpm package",
+		"compile": "webpack",
+		"watch": "webpack --watch",
+		"package": "webpack --mode production --devtool hidden-source-map",
+		"compile-tests": "tsc -p . --outDir out",
+		"watch-tests": "tsc -p . -w --outDir out",
+		"pretest": "pnpm compile-tests && pnpm compile && pnpm lint",
+		"lint": "eslint src --ext ts",
+		"test": "mocha \"out/src/test/**/*.test.js\"",
+		"build": "vsce package --no-dependencies",
+		"changelog": "standard-version",
+		"publish": "vsce publish --no-dependencies && ovsx publish --no-dependencies",
+		"unpublish": "vsce unpublish && ovsx unpublish",
+		"build-webviews": "pnpm --filter xiaoyuzhou build && pnpm --filter weread build",
+		"build-publish": "pnpm build-webviews && pnpm package && pnpm changelog && pnpm run publish",
+		"dev": "concurrently -n XIAOYUZHOU,WEREAD -c white,blue \"pnpm --filter xiaoyuzhou dev\" \"pnpm --filter weread dev\""
+	},
+	"devDependencies": {
+		"@eslint/js": "9.30.1",
+		"@types/axios": "^0.14.4",
+		"@types/mocha": "^10.0.9",
+		"@types/node": "24.0.13",
+		"@types/vscode": "1.80.0",
+		"@typescript-eslint/eslint-plugin": "8.36.0",
+		"@typescript-eslint/parser": "8.36.0",
+		"@vscode/test-electron": "2.5.2",
+		"concurrently": "^9.0.1",
+		"copy-webpack-plugin": "^13.0.0",
+		"eslint": "9.30.1",
+		"globals": "16.3.0",
+		"mocha": "11.7.1",
+		"standard-version": "^9.5.0",
+		"ts-loader": "9.5.2",
+		"typescript": "5.8.3",
+		"typescript-eslint": "^8.15.0",
+		"webpack": "5.100.0",
+		"webpack-cli": "6.0.1"
+	},
+	"dependencies": {
+		"axios": "1.10.0",
+		"bufferutil": "^4.0.9",
+		"utf-8-validate": "^6.0.5"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/ylw1997/touchFish.git"
+	}
+}

@@ -1,0 +1,1013 @@
+import { useCallback, useEffect, useState, useRef } from "react";
+import {
+  Avatar,
+  Button,
+  Dropdown,
+  Drawer,
+  Empty,
+  FloatButton,
+  Input,
+  List,
+  Segmented,
+  Space,
+  Spin,
+  Tag,
+  Tabs,
+} from "antd";
+import {
+  PlayCircleOutlined,
+  PlusCircleOutlined,
+  PlusOutlined,
+  LogoutOutlined,
+  MinusOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+  TrophyOutlined,
+  UserOutlined,
+  VerticalAlignTopOutlined,
+  HomeOutlined,
+  LoginOutlined,
+  AppstoreOutlined,
+} from "@ant-design/icons";
+import { AnimatePresence, motion } from "framer-motion";
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
+import "dayjs/locale/zh-cn";
+
+import LoginModal from "./components/LoginModal";
+
+dayjs.extend(relativeTime);
+dayjs.locale("zh-cn");
+import PlayBar from "./components/PlayBar";
+import PlaylistCard from "./components/PlaylistCard";
+import SongCard from "./components/SongCard";
+import { XiaoyuzhouLogo } from "./components/XiaoyuzhouLogo";
+import { ShownotesDrawer } from "./components/playbar/ShownotesDrawer";
+import { useXiaoyuzhou } from "./hooks/useXiaoyuzhou";
+import { useRequest } from "./hooks/useRequest";
+import { useFontSizeStore } from "./store/fontSize";
+import { usePlayerStore } from "./store/player";
+import { useUserStore } from "./store/user";
+
+
+
+import "./style/index.less";
+
+function App() {
+  const [groupOpen, setGroupOpen] = useState(false);
+  const groupRef = useRef<HTMLDivElement>(null);
+  const { request, messageApi } = useRequest();
+  const { fontSize, increase, decrease } = useFontSizeStore();
+  const { isLoggedIn, userInfo, logout, login } = useUserStore();
+  const currentEpisode = usePlayerStore((state) => state.currentEpisode);
+
+  const playEpisode = usePlayerStore((state) => state.play);
+  const addToPlaylist = usePlayerStore((state) => state.addToPlaylist);
+  const {
+    loading,
+    getDiscovery,
+    getInboxList,
+    getPilotDiscoveryList,
+    getTopList,
+    doSearch,
+    getPodcastDetail,
+    getEpisodeDetail,
+    getSubscriptions,
+    updateSubscription,
+  } = useXiaoyuzhou();
+
+  const [activeTab, setActiveTab] = useState("recommend");
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [inboxEpisodes, setInboxEpisodes] = useState<any[]>([]);
+  const [discoveryBlocks, setDiscoveryBlocks] = useState<any[]>([]);
+  const [pilotDiscoveryList, setPilotDiscoveryList] = useState<any[]>([]);
+  const [topList, setTopList] = useState<any[]>([]);
+  const [subscriptions, setSubscriptions] = useState<any[]>([]);
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [topCategory, setTopCategory] = useState<"HOT" | "ROCK" | "NEW">("HOT");
+  const [podcastOpen, setPodcastOpen] = useState(false);
+  const [podcastLoading, setPodcastLoading] = useState(false);
+  const [podcastDetail, setPodcastDetail] = useState<any | null>(null);
+  const [podcastEpisodes, setPodcastEpisodes] = useState<any[]>([]);
+  const [episodeOpen, setEpisodeOpen] = useState(false);
+  const [episodeDetail, setEpisodeDetail] = useState<any | null>(null);
+  const [searchDrawerOpen, setSearchDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    const handleAuthSync = (event: MessageEvent) => {
+      const payload = event.data?.payload;
+      if (event.data?.command !== "XIAOYUZHOU_AUTH_SYNC" || !payload) {
+        return;
+      }
+
+      if (payload.isLoggedIn && payload.userInfo) {
+        login(payload.userInfo);
+      } else {
+        logout();
+      }
+    };
+
+    window.addEventListener("message", handleAuthSync);
+
+    const syncAuth = async () => {
+      const result = await request<any>("XIAOYUZHOU_GET_USER_INFO" as any, {});
+      if (
+        result.code === 0 &&
+        result.data?.isLoggedIn &&
+        result.data?.userInfo
+      ) {
+        login(result.data.userInfo);
+      }
+    };
+
+    void syncAuth();
+
+    return () => window.removeEventListener("message", handleAuthSync);
+  }, [login, logout, request]);
+
+  // 监听来自扩展的播放控制命令
+  useEffect(() => {
+    const handleCommand = (event: MessageEvent) => {
+      const { command } = event.data || {};
+      if (command === "XIAOYUZHOU_PLAY_PAUSE_COMMAND") {
+        usePlayerStore.getState().togglePlay();
+      } else if (command === "XIAOYUZHOU_PLAY_NEXT_COMMAND") {
+        usePlayerStore.getState().playNext();
+      } else if (command === "XIAOYUZHOU_PAUSE_COMMAND") {
+        usePlayerStore.getState().pause();
+      }
+    };
+
+    window.addEventListener("message", handleCommand);
+    return () => window.removeEventListener("message", handleCommand);
+  }, []);
+
+
+
+  const loadDiscovery = useCallback(async () => {
+    const [inboxData, discoveryData, pilotData] = await Promise.all([
+      getInboxList(),
+      getDiscovery(),
+      getPilotDiscoveryList(),
+    ]);
+    setInboxEpisodes(inboxData || []);
+    setDiscoveryBlocks(discoveryData || []);
+    setPilotDiscoveryList(pilotData || []);
+  }, [getDiscovery, getInboxList, getPilotDiscoveryList]);
+
+  const loadTopList = useCallback(
+    async (category: "HOT" | "ROCK" | "NEW") => {
+      const data = await getTopList(category);
+      setTopList(data || []);
+    },
+    [getTopList],
+  );
+
+  const handleUpdateSubscription = async () => {
+    if (!podcastDetail) return;
+    const isSubscribed = podcastDetail.subscriptionStatus === "ON";
+    const mode = isSubscribed ? "OFF" : "ON";
+
+    const result = await updateSubscription(podcastDetail.pid, mode);
+    if (result) {
+      setPodcastDetail(result);
+      messageApi.success(mode === "ON" ? "订阅成功" : "已取消订阅");
+
+      // 刷新列表
+      void getSubscriptions().then((data) => setSubscriptions(data));
+      void loadDiscovery();
+    } else {
+      messageApi.error("操作失败，请重试");
+    }
+  };
+
+  const loadSubscriptions = useCallback(async () => {
+    if (!isLoggedIn) {
+      setSubscriptions([]);
+      return;
+    }
+
+    const data = await getSubscriptions();
+    setSubscriptions(
+      data.map((item: any) => item?.podcast || item).filter(Boolean),
+    );
+  }, [getSubscriptions, isLoggedIn]);
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setInboxEpisodes([]);
+      setDiscoveryBlocks([]);
+      setPilotDiscoveryList([]);
+      return;
+    }
+    void loadDiscovery();
+  }, [isLoggedIn, loadDiscovery]);
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setTopList([]);
+      return;
+    }
+    void loadTopList(topCategory);
+  }, [isLoggedIn, loadTopList, topCategory]);
+
+  useEffect(() => {
+    if (activeTab === "my") {
+      void loadSubscriptions();
+    }
+  }, [activeTab, loadSubscriptions]);
+
+  const handleLogout = useCallback(() => {
+    (async () => {
+      try {
+        await request<any>("XIAOYUZHOU_LOGOUT" as any, {});
+      } finally {
+        logout();
+        setSubscriptions([]);
+      }
+    })();
+  }, [logout, request]);
+
+  const handleRefresh = useCallback(() => {
+    switch (activeTab) {
+      case "recommend":
+        void loadDiscovery();
+        break;
+      case "rank":
+        void loadTopList(topCategory);
+        break;
+      case "my":
+        if (isLoggedIn) {
+          void loadSubscriptions();
+        }
+        break;
+      default:
+        break;
+    }
+  }, [
+    activeTab,
+    loadDiscovery,
+    loadTopList,
+    loadSubscriptions,
+    topCategory,
+    isLoggedIn,
+  ]);
+
+  const openPodcast = useCallback(
+    async (podcast: any) => {
+      const pid = podcast?.pid || podcast?.id;
+      if (!pid) {
+        return;
+      }
+
+      setPodcastOpen(true);
+      setPodcastLoading(true);
+      try {
+        const detail = await getPodcastDetail(pid);
+        setPodcastDetail(detail?.podcast || null);
+        setPodcastEpisodes(detail?.episodes || []);
+      } finally {
+        setPodcastLoading(false);
+      }
+    },
+    [getPodcastDetail],
+  );
+
+  const openEpisode = useCallback(
+    async (episode: any) => {
+      const eid = episode?.eid || episode?.id;
+      if (!eid) {
+        return;
+      }
+
+      const detail = await getEpisodeDetail(eid);
+      if (!detail) {
+        return;
+      }
+
+      setEpisodeDetail(detail);
+      setEpisodeOpen(true);
+    },
+    [getEpisodeDetail],
+  );
+
+  const handleSearch = useCallback(async () => {
+    if (!searchKeyword.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    const data = await doSearch(searchKeyword.trim());
+    setSearchResults(data || []);
+  }, [doSearch, searchKeyword]);
+
+  const handlePlayEpisode = useCallback(
+    (episode: any) => {
+      playEpisode(episode);
+      messageApi.success(`开始播放: ${episode.title || "未命名单集"}`);
+    },
+    [playEpisode, messageApi],
+  );
+
+  const handleAddToPlaylist = useCallback(
+    (episode: any) => {
+      addToPlaylist(episode);
+      messageApi.success("已添加到播放列表");
+    },
+    [addToPlaylist, messageApi],
+  );
+
+  const renderPodcastList = (items: any[], emptyText: string) => {
+    if (loading && items.length === 0) {
+      return (
+        <div
+          style={{ display: "flex", justifyContent: "center", padding: "40px" }}
+        >
+          <Spin size="large" />
+        </div>
+      );
+    }
+
+    if (items.length === 0) {
+      return <Empty description={emptyText} />;
+    }
+
+    return (
+      <div className="playlist-grid">
+        {items.map((item, idx) => (
+          <PlaylistCard
+            key={item?.pid || item?.id || idx}
+            playlist={item}
+            onClick={openPodcast}
+          />
+        ))}
+      </div>
+    );
+  };
+
+  return (
+    <div className="qqmusic-app" style={{ fontSize: `${fontSize}px` }}>
+      <div className="qqmusic-header">
+        <div className="qqmusic-header-left">
+          <XiaoyuzhouLogo className="xiaoyuzhou-logo" />
+        </div>
+        <div className="qqmusic-header-actions">
+          {isLoggedIn ? (
+            <Dropdown
+              menu={{
+                items: [
+                  {
+                    key: "logout",
+                    icon: <LogoutOutlined />,
+                    label: "退出登录",
+                  },
+                ],
+                onClick: ({ key }) => {
+                  console.log("[xiaoyuzhou] Menu item clicked:", key);
+                  if (key === "logout") {
+                    handleLogout();
+                  }
+                },
+              }}
+              placement="bottomRight"
+            >
+              <Space style={{ cursor: "pointer" }}>
+                {userInfo?.avatar ? (
+                  <Avatar src={userInfo.avatar} size="small" />
+                ) : null}
+                {userInfo?.nickname ? (
+                  <span
+                    style={{
+                      fontSize: "14px",
+                      color: "var(--vscode-foreground)",
+                    }}
+                  >
+                    {userInfo.nickname}
+                  </span>
+                ) : null}
+              </Space>
+            </Dropdown>
+          ) : (
+            <Button
+              type="text"
+              icon={<LoginOutlined />}
+              onClick={() => setLoginModalOpen(true)}
+            >
+              登录
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <div className="qqmusic-content">
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          className="qqmusic-tabs"
+          centered
+          items={[
+            {
+              key: "recommend",
+              label: "推荐",
+              icon: <HomeOutlined />,
+              children: (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.25 }}
+                  className="tab-content"
+                >
+                  {loading && discoveryBlocks.length === 0 ? (
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "center",
+                        padding: "40px",
+                      }}
+                    >
+                      <Spin size="large" />
+                    </div>
+                  ) : discoveryBlocks.length === 0 ? (
+                    <Empty description="暂无推荐内容" />
+                  ) : (
+                    <div className="discovery-blocks">
+                      {inboxEpisodes.length > 0 ? (
+                        <div className="section">
+                          <div className="section-title">
+                            <h2>订阅更新</h2>
+                          </div>
+                          <div className="song-list">
+                            {inboxEpisodes.map((episode: any) => (
+                              <SongCard
+                                key={episode.eid || episode.id}
+                                song={episode}
+                                onPlay={handlePlayEpisode}
+                                onShowDetail={openEpisode}
+                                onAddToPlaylist={handleAddToPlaylist}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                      {discoveryBlocks.map((block: any, idx: number) => {
+                        if (block.type === "BANNER") {
+                          return (
+                            <div key={idx} className="banner-section">
+                              <div className="banner-carousel">
+                                {block.items.map((banner: any) => (
+                                  <div key={banner.id} className="banner-item">
+                                    <img
+                                      src={banner.image}
+                                      alt={banner.title}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        if (block.type === "EPISODES") {
+                          return (
+                            <div key={idx} className="section">
+                              <div className="section-title">
+                                <h2>{block.title}</h2>
+                              </div>
+                              <div className="song-list">
+                                {block.items.map((episode: any) => (
+                                  <SongCard
+                                    key={episode.eid}
+                                    song={episode}
+                                    onPlay={handlePlayEpisode}
+                                    onShowDetail={openEpisode}
+                                    onAddToPlaylist={handleAddToPlaylist}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        if (block.type === "EDITOR_PICK") {
+                          return (
+                            <div key={idx} className="section">
+                              <div className="section-title">
+                                <h2>编辑精选</h2>
+                              </div>
+                              <div className="song-list">
+                                {block.items.map((item: any) => (
+                                  <SongCard
+                                    key={item.eid || item.id || item.pid}
+                                    song={item}
+                                    onPlay={handlePlayEpisode}
+                                    onShowDetail={openEpisode}
+                                    onAddToPlaylist={handleAddToPlaylist}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        return null;
+                      })}
+                      {pilotDiscoveryList.length > 0 ? (
+                        <div className="section">
+                          <div className="section-title">
+                            <h2>新节目广场</h2>
+                          </div>
+                          <div className="playlist-grid">
+                            {pilotDiscoveryList.map(
+                              (podcast: any, idx: number) => (
+                                <PlaylistCard
+                                  key={
+                                    podcast?.pid ||
+                                    podcast?.id ||
+                                    `pilot-${idx}`
+                                  }
+                                  playlist={podcast}
+                                  onClick={openPodcast}
+                                />
+                              ),
+                            )}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
+                </motion.div>
+              ),
+            },
+            {
+              key: "rank",
+              label: "排行",
+              icon: <TrophyOutlined />,
+              children: (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.25 }}
+                  className="tab-content"
+                >
+                  <div className="rank-header">
+                    <Segmented
+                      block
+                      value={topCategory}
+                      onChange={(value) =>
+                        setTopCategory(value as "HOT" | "ROCK" | "NEW")
+                      }
+                      options={[
+                        { label: "最热", value: "HOT" },
+                        { label: "飙升", value: "ROCK" },
+                        { label: "新星", value: "NEW" },
+                      ]}
+                    />
+                    {loading && topList.length === 0 ? (
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "center",
+                          padding: "40px",
+                        }}
+                      >
+                        <Spin size="large" />
+                      </div>
+                    ) : (
+                      <div className="song-list">
+                        {topList.map((episode, idx) => (
+                          <SongCard
+                            key={episode?.eid || idx}
+                            song={episode}
+                            onPlay={handlePlayEpisode}
+                            onShowDetail={openEpisode}
+                            onAddToPlaylist={handleAddToPlaylist}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              ),
+            },
+            {
+              key: "my",
+              label: "我的",
+              icon: <UserOutlined />,
+              children: (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.25 }}
+                  className="tab-content"
+                >
+                  {isLoggedIn ? (
+                    <div className="my-content">
+                      <div className="user-header">
+                        {userInfo?.avatar ? (
+                          <Avatar src={userInfo.avatar} size={72} />
+                        ) : null}
+                        <div style={{ textAlign: "center" }}>
+                          <h2
+                            style={{
+                              margin: "4px 0",
+                              fontSize: "20px",
+                              fontWeight: "bold",
+                            }}
+                          >
+                            {userInfo?.nickname || "用户"}
+                          </h2>
+                          <p
+                            style={{
+                              margin: 0,
+                              opacity: 0.5,
+                              fontSize: "13px",
+                            }}
+                          >
+                            享受播客时光
+                          </p>
+                        </div>
+                      </div>
+                      <div className="section-title">
+                        <h2>我的订阅</h2>
+                      </div>
+                      {renderPodcastList(
+                        subscriptions,
+                        "这个账号暂时还没有已订阅的节目。",
+                      )}
+                    </div>
+                  ) : (
+                    <div className="login-prompt">
+                      <h2>请先登录</h2>
+                      <p>登录后可以查看我的订阅和更多内容</p>
+                      <Button
+                        type="primary"
+                        size="large"
+                        icon={<LoginOutlined />}
+                        onClick={() => setLoginModalOpen(true)}
+                      >
+                        立即登录
+                      </Button>
+                    </div>
+                  )}
+                </motion.div>
+              ),
+            },
+          ]}
+        />
+      </div>
+
+      <LoginModal
+        open={loginModalOpen}
+        onClose={() => setLoginModalOpen(false)}
+      />
+
+      <AnimatePresence>
+        {currentEpisode ? <PlayBar onOpenPodcast={openPodcast} /> : null}
+      </AnimatePresence>
+
+      <Drawer
+        title={podcastDetail?.title || "播客详情"}
+        placement="bottom"
+        height="90%"
+        open={podcastOpen}
+        onClose={() => setPodcastOpen(false)}
+      >
+        <div style={{ padding: "10px" }}>
+          {podcastLoading ? (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                padding: "40px",
+              }}
+            >
+              <Spin size="large" />
+            </div>
+          ) : (
+            <>
+              {/* 频道简介 */}
+              {podcastDetail && (
+                <div style={{ marginBottom: 20, padding: "0 8px" }}>
+                  <div style={{ display: "flex", gap: 16, marginBottom: 12 }}>
+                    <Avatar
+                      src={
+                        podcastDetail.image?.smallPicUrl ||
+                        podcastDetail.image?.picUrl
+                      }
+                      size={80}
+                      shape="square"
+                      style={{ borderRadius: 8, flexShrink: 0 }}
+                    />
+                    <div style={{ flex: 1 }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "flex-start",
+                          marginBottom: "8px",
+                        }}
+                      >
+                        <h3
+                          style={{
+                            margin: 0,
+                            fontSize: "18px",
+                            fontWeight: 600,
+                            flex: 1,
+                            marginRight: "12px",
+                          }}
+                        >
+                          {podcastDetail.title}
+                        </h3>
+                        <Button
+                          type={
+                            podcastDetail.subscriptionStatus === "ON"
+                              ? "default"
+                              : "primary"
+                          }
+                          size="small"
+                          onClick={handleUpdateSubscription}
+                          loading={loading}
+                        >
+                          {podcastDetail.subscriptionStatus === "ON"
+                            ? "已订阅"
+                            : "订阅"}
+                        </Button>
+                      </div>
+                      <p
+                        style={{
+                          margin: "0 0 4px 0",
+                          opacity: 0.7,
+                          fontSize: "14px",
+                        }}
+                      >
+                        {podcastDetail.author || podcastDetail.publisher}
+                      </p>
+                      {podcastDetail.subscriptionCount ? (
+                        <p
+                          style={{ margin: 0, opacity: 0.5, fontSize: "12px" }}
+                        >
+                          {podcastDetail.subscriptionCount.toLocaleString()}{" "}
+                          订阅
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                  {podcastDetail.description ? (
+                    <p
+                      style={{
+                        margin: 0,
+                        opacity: 0.8,
+                        fontSize: "14px",
+                        lineHeight: 1.6,
+                      }}
+                    >
+                      {podcastDetail.description}
+                    </p>
+                  ) : null}
+                </div>
+              )}
+              <List
+                dataSource={podcastEpisodes}
+                header={
+                  <div style={{ fontWeight: 600 }}>
+                    单集列表 ({podcastEpisodes.length})
+                  </div>
+                }
+                renderItem={(item) => {
+                  const isCurrent = currentEpisode?.eid === item.eid;
+                  const { isPlayed, isFinished } = item;
+
+                  return (
+                    <List.Item
+                      className={`${isCurrent ? "episode-item-active" : ""} ${isFinished ? "episode-item-finished" : isPlayed ? "episode-item-played" : ""}`}
+                      actions={[
+                        <Button
+                          key="add"
+                          type="text"
+                          icon={<PlusCircleOutlined />}
+                          title="加入播放列表"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            addToPlaylist(item);
+                            messageApi.success("已添加到播放列表");
+                          }}
+                        />,
+                        <Button
+                          key="play"
+                          type="text"
+                          icon={
+                            isCurrent ? (
+                              <PlayCircleOutlined
+                                style={{ color: "var(--ant-primary-color)" }}
+                              />
+                            ) : (
+                              <PlayCircleOutlined />
+                            )
+                          }
+                          title="播放"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePlayEpisode(item);
+                          }}
+                        />,
+                      ]}
+                    >
+                      <List.Item.Meta
+                        avatar={
+                          <div style={{ position: "relative" }}>
+                            <Avatar
+                              src={
+                                item?.podcast?.image?.smallPicUrl ||
+                                item?.image?.smallPicUrl
+                              }
+                              className={isCurrent ? "playing-avatar" : ""}
+                              style={{
+                                opacity: isFinished ? 0.6 : 1,
+                              }}
+                            />
+                            {isFinished && (
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  bottom: -2,
+                                  right: -2,
+                                  background: "var(--ant-success-color)",
+                                  borderRadius: "50%",
+                                  width: 12,
+                                  height: 12,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  border: "1px solid #fff",
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    width: 6,
+                                    height: 3,
+                                    borderLeft: "1.5px solid white",
+                                    borderBottom: "1.5px solid white",
+                                    transform: "rotate(-45deg)",
+                                    marginTop: -1,
+                                  }}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        }
+                        title={
+                          <span
+                            style={{
+                              color: isCurrent
+                                ? "var(--ant-primary-color)"
+                                : isFinished
+                                  ? "var(--vscode-descriptionForeground)"
+                                  : "inherit",
+                              fontWeight: isCurrent ? 600 : "normal",
+                              opacity: isFinished ? 0.7 : 1,
+                              display: "block",
+                              marginBottom: "4px",
+                            }}
+                          >
+                            {item?.title || "未命名单集"}
+                          </span>
+                        }
+                        description={
+                          <div
+                            style={{
+                              fontSize: "12px",
+                              opacity: 0.6,
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              flexWrap: "wrap",
+                            }}
+                          >
+                            <span>
+                              {item.pubDate
+                                ? dayjs(item.pubDate).fromNow()
+                                : ""}
+                            </span>
+                            <span>
+                              {item.duration
+                                ? `${Math.floor(item.duration / 60)}:${String(item.duration % 60).padStart(2, "0")}`
+                                : ""}
+                            </span>
+                            {isFinished ? (
+                              <Tag
+                                bordered={false}
+                                style={{
+                                  fontSize: "10px",
+                                  padding: "0 4px",
+                                  lineHeight: "14px",
+                                  margin: 0,
+                                }}
+                              >
+                                已听完
+                              </Tag>
+                            ) : isPlayed ? (
+                              <Tag
+                                bordered={false}
+                                color="processing"
+                                style={{
+                                  fontSize: "10px",
+                                  padding: "0 4px",
+                                  lineHeight: "14px",
+                                  margin: 0,
+                                }}
+                              >
+                                {item.readTrackInfo?.position
+                                  ? `已听 ${Math.floor(item.readTrackInfo.position / 60)}:${String(Math.floor(item.readTrackInfo.position % 60)).padStart(2, "0")}`
+                                  : "收听中"}
+                              </Tag>
+                            ) : null}
+                          </div>
+                        }
+                      />
+                    </List.Item>
+                  );
+                }}
+              />
+            </>
+          )}
+        </div>
+      </Drawer>
+
+      <ShownotesDrawer
+        open={episodeOpen}
+        onClose={() => setEpisodeOpen(false)}
+        episode={episodeDetail}
+      />
+
+      <Drawer
+        title="搜索播客"
+        placement="bottom"
+        height="90%"
+        open={searchDrawerOpen}
+        onClose={() => setSearchDrawerOpen(false)}
+      >
+        <div style={{ padding: "10px" }}>
+          <Input.Search
+            placeholder="搜索播客"
+            enterButton="搜索"
+            value={searchKeyword}
+            onChange={(e) => setSearchKeyword(e.target.value)}
+            onSearch={() => void handleSearch()}
+            style={{ marginBottom: 16 }}
+          />
+          {renderPodcastList(searchResults, "输入关键词后搜索小宇宙播客")}
+        </div>
+      </Drawer>
+
+      <FloatButton.BackTop
+        className="touchfish-float-backtop"
+        style={{ insetInlineEnd: 24, bottom: currentEpisode ? 32 : 24 }}
+        visibilityHeight={500}
+        duration={1000}
+        icon={<VerticalAlignTopOutlined />}
+      />
+      <div ref={groupRef}>
+        <FloatButton
+          className="touchfish-float-refresh"
+          style={{ insetInlineEnd: 24, bottom: currentEpisode ? 96 : 88 }}
+          icon={<ReloadOutlined style={{ color: "#1890ff" }} />}
+          tooltip={{ title: "刷新" }}
+          onClick={handleRefresh}
+        />
+        <FloatButton.Group
+          trigger="click"
+          open={groupOpen}
+          onOpenChange={(open) => {
+            const event = window.event as MouseEvent;
+            if (event && groupRef.current?.contains(event.target as Node)) {
+              setGroupOpen(open);
+            }
+          }}
+          shape="circle"
+          style={{ insetInlineEnd: 24, bottom: currentEpisode ? 160 : 152 }}
+          icon={<AppstoreOutlined />}
+        >
+
+          <FloatButton
+            icon={<SearchOutlined style={{ color: "#faad14" }} />}
+            tooltip={{ title: "搜索" }}
+            onClick={() => setSearchDrawerOpen(true)}
+          />
+          <FloatButton
+            onClick={decrease}
+            icon={<MinusOutlined style={{ color: "#52c41a" }} />}
+            tooltip={{ title: "减小字体" }}
+          />
+          <FloatButton
+            onClick={increase}
+            icon={<PlusOutlined style={{ color: "#ff4d4f" }} />}
+            tooltip={{ title: "增大字体" }}
+          />
+        </FloatButton.Group>
+      </div>
+    </div>
+  );
+}
+
+export default App;

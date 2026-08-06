@@ -1,0 +1,65 @@
+// See https://go.microsoft.com/fwlink/?LinkId=733558
+// for the documentation about the tasks.json format
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "npm",
+			"script": "watch",
+			"problemMatcher": [],
+			"isBackground": true,
+			"presentation": {
+				"reveal": "never",
+				"group": "watchers"
+			},
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		},
+		{
+			"type": "npm",
+			"script": "watch-tests",
+			"problemMatcher": "$tsc-watch",
+			"isBackground": true,
+			"presentation": {
+				"reveal": "never",
+				"group": "watchers"
+			},
+			"group": "build"
+		},
+		{
+			"label": "tasks: watch-tests",
+			"dependsOn": [
+				"npm: watch",
+				"npm: watch-tests"
+			],
+			"problemMatcher": []
+		},
+		{
+			"label": "Weibo Build and Publish (Root)",
+			"type": "shell",
+			"dependsOn": ["Weibo Build (weibo)", "Weibo Publish (Root)"],
+			"dependsOrder": "sequence",
+			"group": "build"
+		},
+		{
+			"label": "Weibo Build (weibo)",
+			"type": "shell",
+			"command": "npm run build",
+			"options": {
+				"cwd": "${workspaceFolder}/weibo"
+			},
+			"group": "build"
+		},
+		{
+			"label": "Weibo Publish (Root)",
+			"type": "shell",
+			"command": "npm run publish",
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"group": "build"
+		}
+	]
+}

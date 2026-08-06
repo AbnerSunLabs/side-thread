@@ -1,0 +1,362 @@
+* {
+  font-family: var(--vscode-font-family), "Microsoft YaHei", sans-serif;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--vscode-editor-background);
+}
+
+.weread-app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--vscode-editor-background);
+  color: var(--vscode-editor-foreground);
+  font-size: var(--app-font-size);
+  transition: all 0.3s ease;
+
+  // 自定义滚动条
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--vscode-scrollbarSlider-background);
+    border-radius: 5px;
+    &:hover {
+      background: var(--vscode-scrollbarSlider-hoverBackground);
+    }
+  }
+
+  .header {
+    padding: 16px 20px;
+    background: color-mix(
+      in srgb,
+      var(--vscode-editor-background) 80%,
+      transparent
+    );
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--vscode-chat-requestBorder);
+    z-index: 10;
+
+    h1 {
+      font-size: calc(var(--app-font-size) + 6px);
+      font-weight: 600;
+      margin: 0;
+      color: var(--vscode-foreground);
+    }
+  }
+
+  .loading-container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .shelf-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+  }
+
+  .shelf-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 24px 16px;
+  }
+
+  .book-item {
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+
+    &:hover {
+      // transform: translateY(-4px);
+      .book-cover {
+        border: 1px solid var(--vscode-widget-border);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+      }
+    }
+
+    .book-cover {
+      width: 100%;
+      aspect-ratio: 3 / 4.2;
+      background-color: var(--vscode-widget-border);
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid var(--vscode-widget-border);
+      transition: all 0.3s ease;
+
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+    }
+
+    .book-info {
+      margin-top: 10px;
+      padding: 0 2px;
+
+      .book-title {
+        font-size: calc(var(--app-font-size) - 2px);
+        line-height: 1.5;
+        color: var(--vscode-foreground);
+        font-weight: 500;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
+  }
+
+  .reader-view {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--vscode-editor-background);
+    z-index: 20;
+
+    .reader-header {
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      background: color-mix(
+        in srgb,
+        var(--vscode-editor-background) 90%,
+        transparent
+      );
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--vscode-chat-requestBorder);
+      height: 50px;
+      flex-shrink: 0;
+
+      .reader-title {
+        margin-left: 12px;
+        font-size: var(--app-font-size);
+        font-weight: 600;
+        color: var(--vscode-foreground);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
+
+    .reader-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      max-width: 800px;
+      margin: 0 auto;
+      width: 100%;
+      box-sizing: border-box;
+
+      .chapter-header {
+        font-size: calc(var(--reader-font-size) + 8px);
+        font-weight: 700;
+        color: var(--vscode-foreground);
+        margin-bottom: 40px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid var(--vscode-chat-requestBorder);
+        line-height: 1.3;
+      }
+
+      .xhtml-content {
+        line-height: 1.8;
+        font-size: var(--reader-font-size) !important;
+        color: var(--vscode-editor-foreground);
+
+        p {
+          margin: 1.5em 0;
+          text-align: justify;
+          font-size: inherit !important;
+
+          * {
+            font-size: inherit !important;
+          }
+        }
+        .qqreader-footnote {
+          width: fit-content;
+          font-size: calc(var(--reader-font-size) - 3px) !important;
+          background: var(--vscode-list-hoverBackground);
+          padding: 10px;
+          border-radius: 4px;
+          
+          // 兜底隐藏可能存在的原生加载失败图片小图标
+          display: inline-block;
+          overflow: hidden;
+          text-indent: 0;
+          
+          &::before {
+            content: attr(alt);
+            display: block;
+          }
+        }
+        
+        .weread-footnote-wrapper {
+          display: inline; // 恢复 inline-block 方便控制
+          vertical-align: middle; // 在一行显示，与文字居中对齐
+          cursor: pointer;
+          margin-left: 2px;
+          margin-right: 2px;
+          line-height: 1;
+          
+          border-bottom: none !important;
+          text-decoration: none !important;
+          padding: 0;
+
+          .weread-footnote-icon {
+            display: inline-block;
+            width: 17px; // 适合一行显示的尺寸
+            height: 17px;
+            background: url(https://cdn.weread.qq.com/web/wrwebnjlogic/image/zhu_black.4728ef05.png) no-repeat;
+            background-size: contain;
+            vertical-align: middle;
+            position: relative;
+            top: -2px; // 稍微向上偏移，与中文字符视觉中心平齐，避免靠下
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+            &:hover {
+              transform: scale(1.15);
+            }
+          }
+        }
+
+        h1,
+        h2,
+        h3,
+        h4 {
+          color: var(--vscode-foreground);
+          margin: 1.5em 0 1em;
+          line-height: 1.3;
+        }
+
+        img {
+          max-width: 100%;
+          height: auto;
+          display: block;
+          margin: 20px auto;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .hot-underline {
+          border-bottom: 1px dashed color-mix(in srgb, var(--vscode-editor-foreground) 40%, transparent) !important;
+          cursor: pointer !important;
+          transition: border-color 0.2s, border-style 0.2s;
+          display: inline !important;
+          padding-bottom: 1px;
+
+          &:hover {
+            border-bottom: 1px solid var(--vscode-textLink-activeForeground, #1890ff) !important;
+          }
+
+          // 当鼠标悬浮在划线内的注释图标上时，强制压制下划线的高亮
+          &.weread-underline-active-footnote {
+            border-bottom: 1px dashed color-mix(in srgb, var(--vscode-editor-foreground) 40%, transparent) !important;
+          }
+        }
+      }
+    }
+
+    .reader-footer {
+      padding: 40px 0 80px;
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+
+      button {
+        min-width: 120px;
+        height: 40px;
+        border-radius: 20px;
+        border: 1px solid var(--vscode-button-border);
+        background: var(--vscode-button-secondaryBackground);
+        color: var(--vscode-button-secondaryForeground);
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &:hover:not(:disabled) {
+          background: var(--vscode-button-secondaryHoverBackground);
+        }
+
+        &:disabled {
+          opacity: 0.3;
+          cursor: not-allowed;
+        }
+      }
+    }
+  }
+}
+
+.catalog-list {
+  background-color: var(--vscode-editor-background);
+  height: 100%;
+  overflow-y: auto;
+
+  .catalog-item {
+    padding: 12px 16px;
+    font-size: var(--app-font-size);
+    color: var(--vscode-foreground);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-bottom: 1px solid rgba(128, 128, 128, 0.1);
+
+    &:hover {
+      background-color: var(--vscode-list-hoverBackground);
+    }
+
+    &.active {
+      color: #1890ff;
+      background-color: var(--vscode-list-activeSelectionBackground);
+      font-weight: 600;
+    }
+
+    &.level-2 {
+      padding-left: 32px;
+      font-size: calc(var(--app-font-size) - 1px);
+    }
+    &.level-3 {
+      padding-left: 48px;
+      font-size: calc(var(--app-font-size) - 2px);
+    }
+  }
+}
+.backdrop-style {
+  background-color: color-mix(
+    in srgb,
+    var(--vscode-editor-background) 50%,
+    transparent
+  );
+  backdrop-filter: saturate(180%) blur(15px);
+}
+
+.ant-popover .ant-popover-inner {
+  border-radius: 12px;
+}
+
+.touchfish-float-backtop,
+.ant-float-btn-group > .ant-float-btn {
+  .backdrop-style();
+  &:hover {
+    background: var(--vscode-button-border);
+  }
+  .ant-float-btn-body {
+    background: none !important;
+  }
+}

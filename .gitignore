@@ -1,0 +1,26 @@
+out
+dist
+node_modules
+.vscode-test/
+*.vsix
+temp
+scratch/
+
+# Build outputs
+weibo/dist
+zhihu/dist
+xhs/dist
+bilibili/dist
+qqmusic/dist
+xiaoyuzhou/dist
+x/dist
+weread/dist
+netease/dist
+douyin/dist
+
+# Old releases
+touchfish-*.vsix
+xapi/
+APIS/
+.claude/
+server/

@@ -1,0 +1,10 @@
+packages:
+  - "weread"
+  - "xiaoyuzhou"
+allowBuilds:
+  "@vscode/vsce-sign": true
+  bufferutil: true
+  canvas: true
+  esbuild: true
+  keytar: true
+  utf-8-validate: true
