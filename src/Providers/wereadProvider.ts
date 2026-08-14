@@ -12,9 +12,11 @@ import {
   web_book_readReviews,
 } from "../api/weread/api/book";
 import { setConfigByKey } from "../core/config";
+import { WereadReadReporter } from "../api/weread/readSession";
 
 export class WereadProvider extends BaseWebviewProvider {
   private client: WeReadClient;
+  private readReporter: WereadReadReporter;
   private webviewView: WebviewView | null = null;
 
   constructor(context: ExtensionContext) {
@@ -34,6 +36,41 @@ export class WereadProvider extends BaseWebviewProvider {
       await setConfigByKey("wereadCookie", newCookie);
     });
 
+    this.readReporter = new WereadReadReporter({
+      init: async (bookId, chapterUid, format) => {
+        const now = Math.floor(Date.now() / 1000);
+        const pc = now - 10;
+        const ps = pc - Math.floor(Math.random() * 5) - 5;
+        return this.client.execute(
+          web_book_read_init,
+          bookId,
+          chapterUid,
+          0,
+          0,
+          pc,
+          ps,
+          format,
+        );
+      },
+      report: async ({ bookId, chapterUid, format, readerToken, rt }) => {
+        const now = Math.floor(Date.now() / 1000);
+        const pc = now - 10;
+        const ps = pc - Math.floor(Math.random() * 5) - 5;
+        return this.client.execute(
+          web_book_read,
+          bookId,
+          chapterUid,
+          0,
+          0,
+          pc,
+          ps,
+          format,
+          readerToken,
+          rt,
+        );
+      },
+    });
+
     context.subscriptions.push(
       workspace.onDidChangeConfiguration((event) => {
         if (!event.affectsConfiguration("touchfish.wereadCookie")) return;
@@ -46,7 +83,19 @@ export class WereadProvider extends BaseWebviewProvider {
 
   public override resolveWebviewView(webviewView: WebviewView) {
     this.webviewView = webviewView;
-    return super.resolveWebviewView(webviewView);
+    const resolved = super.resolveWebviewView(webviewView);
+    webviewView.onDidChangeVisibility(() => {
+      if (webviewView.visible) {
+        this.readReporter.resume();
+        return;
+      }
+      void this.readReporter.pause();
+    });
+    webviewView.onDidDispose(() => {
+      void this.readReporter.stop();
+      this.webviewView = null;
+    });
+    return resolved;
   }
 
   protected async handleCustomMessage(
@@ -73,56 +122,12 @@ export class WereadProvider extends BaseWebviewProvider {
         }
 
         case "WEREAD_GET_CHAPTER": {
-          const { bookId, chapterUid, silent } = payload;
+          const { bookId, chapterUid } = payload;
           const result = await this.client.execute(
             web_book_chapter_e,
             bookId,
             chapterUid,
           );
-
-          // 只有非静默加载（即用户手动切章）时才上报进度并提醒
-          if (!silent) {
-            (async () => {
-              try {
-                const now = Math.floor(Date.now() / 1000);
-                const pc = now - 10;
-                const ps = pc - Math.floor(Math.random() * 5) - 5;
-                const format = result.format || "epub";
-
-                const initRes = await this.client.execute(
-                  web_book_read_init,
-                  bookId,
-                  chapterUid,
-                  0,
-                  0,
-                  pc,
-                  ps,
-                  format,
-                );
-                if (initRes && initRes.succ === 1) {
-                  webviewView.webview.postMessage({
-                    command: "WEREAD_SAVE_PROGRESS_SUCCESS",
-                  });
-                  if (initRes.readerToken) {
-                    await this.client.execute(
-                      web_book_read,
-                      bookId,
-                      chapterUid,
-                      0,
-                      0,
-                      pc,
-                      ps,
-                      format,
-                      initRes.readerToken,
-                      60,
-                    );
-                  }
-                }
-              } catch (e) {
-                console.error("[Weread] Save progress failed:", e);
-              }
-            })();
-          }
 
           webviewView.webview.postMessage({
             command: "WEREAD_CHAPTER_DATA",
@@ -184,6 +189,21 @@ export class WereadProvider extends BaseWebviewProvider {
             command: "WEREAD_BEST_THOUGHTS_DATA",
             payload: result,
           });
+          break;
+        }
+
+        case "WEREAD_READ_SESSION_START": {
+          const { bookId, chapterUid, format } = payload || {};
+          if (!bookId || chapterUid == null) break;
+          await this.readReporter.start(bookId, chapterUid, format || "epub");
+          break;
+        }
+        case "WEREAD_READ_SESSION_STOP": {
+          await this.readReporter.stop();
+          break;
+        }
+        case "WEREAD_READ_ACTIVITY": {
+          this.readReporter.markActivity();
           break;
         }
 
