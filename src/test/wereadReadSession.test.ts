@@ -1,0 +1,107 @@
+import * as assert from "assert";
+import { describe, it } from "mocha";
+import {
+  capRt,
+  createReadSession,
+  flushSession,
+  isSameChapter,
+  markActivity,
+  pauseSession,
+  READ_TIME_IDLE_MS,
+  resumeSession,
+  tickSession,
+} from "../api/weread/readSession";
+
+function sessionAt(now: number) {
+  return createReadSession({
+    bookId: "b1",
+    chapterUid: 12,
+    format: "epub",
+    readerToken: "token",
+    now,
+  });
+}
+
+describe("weread readSession", () => {
+  it("capRt clamps to 0–60 and drops sub-second values", () => {
+    assert.equal(capRt(0.9), 0);
+    assert.equal(capRt(1), 1);
+    assert.equal(capRt(59.9), 59);
+    assert.equal(capRt(60), 60);
+    assert.equal(capRt(120), 60);
+    assert.equal(capRt(Number.NaN), 0);
+  });
+
+  it("does not report before 60 seconds of active reading", () => {
+    const started = sessionAt(1_000);
+    const result = tickSession(started, 1_000 + 59_000);
+    assert.equal(result.reportSeconds, null);
+    assert.equal(result.session.unreportedMs, 59_000);
+    assert.equal(result.becameIdle, false);
+  });
+
+  it("reports exactly 60 seconds and keeps the remainder", () => {
+    const started = sessionAt(1_000);
+    const result = tickSession(started, 1_000 + 75_000);
+    assert.equal(result.reportSeconds, 60);
+    assert.equal(result.session.unreportedMs, 15_000);
+    assert.equal(result.session.lastTickAt, 1_000 + 75_000);
+  });
+
+  it("paused session does not accumulate", () => {
+    const started = sessionAt(1_000);
+    const paused = pauseSession(started, 1_000 + 10_000);
+    const later = tickSession(paused.session, 1_000 + 80_000);
+    assert.equal(later.reportSeconds, null);
+    assert.equal(later.session.unreportedMs, paused.session.unreportedMs);
+  });
+
+  it("idle timeout stops accumulating at last activity and flushes at most 60s", () => {
+    const started = sessionAt(1_000);
+    const active = markActivity(started, 1_000 + 5_000);
+    const idle = tickSession(active, 1_000 + 5_000 + READ_TIME_IDLE_MS);
+    assert.equal(idle.becameIdle, true);
+    assert.equal(idle.session.paused, true);
+    assert.ok((idle.reportSeconds ?? 0) <= 60);
+    const leftover = idle.session.unreportedMs;
+    const later = tickSession(
+      idle.session,
+      1_000 + 5_000 + READ_TIME_IDLE_MS + 60_000,
+    );
+    assert.equal(later.reportSeconds, null);
+    assert.equal(later.session.unreportedMs, leftover);
+  });
+
+  it("flush reports remaining seconds once and clears unreportedMs", () => {
+    const started = sessionAt(1_000);
+    const ticked = tickSession(started, 1_000 + 40_000);
+    const flushed = flushSession(ticked.session, 1_000 + 40_000);
+    assert.equal(flushed.reportSeconds, 40);
+    assert.equal(flushed.session.unreportedMs, 0);
+  });
+
+  it("flush of 90s active time only reports 60s and drops the rest", () => {
+    const started = sessionAt(1_000);
+    const ticked = tickSession(started, 1_000 + 90_000);
+    // tick 已先报 60，剩余 30
+    const flushed = flushSession(ticked.session, 1_000 + 90_000);
+    assert.equal(ticked.reportSeconds, 60);
+    assert.equal(flushed.reportSeconds, 30);
+    assert.equal(flushed.session.unreportedMs, 0);
+  });
+
+  it("resume continues from the resume timestamp", () => {
+    const started = sessionAt(1_000);
+    const paused = pauseSession(started, 1_000 + 10_000);
+    const resumed = resumeSession(paused.session, 5_000_000);
+    const ticked = tickSession(resumed, 5_000_000 + 60_000);
+    assert.equal(ticked.reportSeconds, 60);
+  });
+
+  it("isSameChapter compares bookId and chapterUid", () => {
+    const started = sessionAt(1);
+    assert.equal(isSameChapter(started, "b1", 12), true);
+    assert.equal(isSameChapter(started, "b1", 13), false);
+    assert.equal(isSameChapter(null, "b1", 12), false);
+  });
+});
