@@ -4,6 +4,20 @@ import {chk, dH, dS, dT} from "../utils/decrypt";
 import {sha256} from "../utils/encode";
 
 const UserAgentForWeb = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36";
+const WereadOrigin = "https://weread.qq.com";
+
+function readRequestHeaders(
+  bookId: string,
+  chapterUid: number,
+  cookie: string,
+) {
+  return {
+    cookie,
+    Origin: WereadOrigin,
+    Referer: `${WereadOrigin}/web/reader/${calcHash(bookId)}k${calcHash(chapterUid)}`,
+    Accept: "application/json, text/plain, */*",
+  };
+}
 
 /**
  * 获取图书详情
@@ -73,6 +87,7 @@ export async function web_book_getProgress(bookId: string, cookie = "") {
  * 开始阅读
  * @param bookId
  * @param chapterUid
+ * @param chapterIdx
  * @param percent
  * @param chapterOffset
  * @param pc
@@ -83,6 +98,7 @@ export async function web_book_getProgress(bookId: string, cookie = "") {
 export async function web_book_read_init(
   bookId: string,
   chapterUid: number,
+  chapterIdx: number,
   percent = 0,
   chapterOffset = 0,
   pc: number,
@@ -94,7 +110,7 @@ export async function web_book_read_init(
     "appId": getAppId(UserAgentForWeb),
     "b": calcHash(bookId),
     "c": calcHash(chapterUid || 0),
-    "ci": chapterUid || 0,
+    "ci": chapterIdx,
     "co": chapterOffset,
     "ct": currentTime(),
     "dy": 0,
@@ -106,9 +122,11 @@ export async function web_book_read_init(
   }
   payload.s = sign(payload)
 
-  const resp = await postJSON("https://weread.qq.com/web/book/read", payload, {
-    cookie: cookie,
-  });
+  const resp = await postJSON(
+    "https://weread.qq.com/web/book/read",
+    payload,
+    readRequestHeaders(bookId, chapterUid, cookie),
+  );
   return resp.json()
 }
 
@@ -116,6 +134,7 @@ export async function web_book_read_init(
  * 上传进度
  * @param bookId
  * @param chapterUid
+ * @param chapterIdx
  * @param percent
  * @param chapterOffset
  * @param pc
@@ -128,6 +147,7 @@ export async function web_book_read_init(
 export async function web_book_read(
     bookId: string,
     chapterUid: number,
+    chapterIdx: number,
     percent = 0,
     chapterOffset = 0,
     pc: number,
@@ -144,7 +164,7 @@ export async function web_book_read(
     "appId": getAppId(UserAgentForWeb),
     "b": calcHash(bookId),
     "c": calcHash(chapterUid || 0),
-    "ci": chapterUid || 0,
+    "ci": chapterIdx,
     "co": chapterOffset,
     "ct": currentTime(),
     "dy": 0,
@@ -160,9 +180,11 @@ export async function web_book_read(
   }
   payload.s = sign(payload)
 
-  const resp = await postJSON("https://weread.qq.com/web/book/read", payload, {
-    cookie: cookie,
-  });
+  const resp = await postJSON(
+    "https://weread.qq.com/web/book/read",
+    payload,
+    readRequestHeaders(bookId, chapterUid, cookie),
+  );
   return resp.json()
 }
 

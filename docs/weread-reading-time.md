@@ -26,7 +26,7 @@
 | 空闲       | 180 秒无 ACTIVITY；宽限期内仍计时，超时后停止 |
 | 离开 flush | 只再报一次，`rt ≤ 60`，禁止连发补报           |
 
-消息：`WEREAD_READ_SESSION_START` / `STOP` / `ACTIVITY`。
+消息：`WEREAD_READ_SESSION_START` / `STOP` / `ACTIVITY`。START 同时携带章节 UID 和目录中的 `chapterIdx`；协议字段 `c` 使用 UID，`ci` 必须使用 `chapterIdx`，两者不能混用。
 
 侧栏显隐不走消息，由 `WereadProvider` 听 `onDidChangeVisibility`：隐藏 `pause`（`pauseReason=visibility`，ACTIVITY 不能唤醒），显示 `resume`。空闲暂停后 ACTIVITY 可以唤醒。
 
@@ -34,7 +34,9 @@
 
 过期章节：`WEREAD_CHAPTER_DATA` 带 `bookId`/`chapterUid`，已离开阅读器或书/章对不上则丢弃。
 
-失败：init / report 失败只打日志，不打断阅读，不上报秒数回滚。`succ !== 1` 同样记失败。
+`/web/book/read` 的成功响应可能只有 `succ` / `synckey`，不保证返回 `readerToken`。无 token 时使用当前 Web 阅读协议的兼容 token 生成 `sg`；不能因缺少 `readerToken` 放弃启动会话。
+
+失败：init / report 失败只写入「SideThread 微信读书」输出日志，不打断阅读，不上报秒数回滚。只有明确的 `succ=1` 或 `synckey` 且没有非零错误码才视为成功，空对象和错误 JSON 不能记录成“上报完成”。
 
 ## 代码入口
 

@@ -12,12 +12,52 @@ import {
   web_book_readReviews,
 } from "../api/weread/api/book";
 import { setConfigByKey } from "../core/config";
-import { WereadReadReporter } from "../api/weread/readSession";
+import { WereadLogFn, WereadReadReporter } from "../api/weread/readSession";
+
+function stringifyWereadLogData(data: unknown): string {
+  if (data === undefined) return "";
+  if (data instanceof Error) {
+    return ` ${data.message}`;
+  }
+  try {
+    return ` ${JSON.stringify(data)}`;
+  } catch {
+    return ` ${String(data)}`;
+  }
+}
+
+function parseChapterIdx(value: unknown): number | undefined {
+  if (
+    typeof value !== "number" &&
+    (typeof value !== "string" || value.trim() === "")
+  ) {
+    return undefined;
+  }
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : undefined;
+}
 
 export class WereadProvider extends BaseWebviewProvider {
   private client: WeReadClient;
   private readReporter: WereadReadReporter;
   private webviewView: WebviewView | null = null;
+  private readonly wereadLogChannel = window.createOutputChannel(
+    "SideThread 微信读书",
+  );
+
+  private wereadLog: WereadLogFn = (level, message, data) => {
+    this.wereadLogChannel.appendLine(
+      `${new Date().toISOString()} [${level}] [Weread] ${message}${stringifyWereadLogData(data)}`,
+    );
+    const safeData = data instanceof Error ? data.message : data;
+    const args =
+      safeData === undefined
+        ? [`[Weread] ${message}`]
+        : [`[Weread] ${message}`, safeData];
+    if (level === "error") console.error(...args);
+    else if (level === "warn") console.warn(...args);
+    else console.info(...args);
+  };
 
   constructor(context: ExtensionContext) {
     super(context, {
@@ -36,8 +76,12 @@ export class WereadProvider extends BaseWebviewProvider {
       await setConfigByKey("wereadCookie", newCookie);
     });
 
+    context.subscriptions.push(this.wereadLogChannel);
+    this.wereadLog("info", "微信读书 Provider 已初始化");
+
     this.readReporter = new WereadReadReporter({
-      init: async (bookId, chapterUid, format) => {
+      log: this.wereadLog,
+      init: async (bookId, chapterUid, chapterIdx, format) => {
         const now = Math.floor(Date.now() / 1000);
         const pc = now - 10;
         const ps = pc - Math.floor(Math.random() * 5) - 5;
@@ -45,6 +89,7 @@ export class WereadProvider extends BaseWebviewProvider {
           web_book_read_init,
           bookId,
           chapterUid,
+          chapterIdx,
           0,
           0,
           pc,
@@ -52,7 +97,14 @@ export class WereadProvider extends BaseWebviewProvider {
           format,
         );
       },
-      report: async ({ bookId, chapterUid, format, readerToken, rt }) => {
+      report: async ({
+        bookId,
+        chapterUid,
+        chapterIdx,
+        format,
+        readerToken,
+        rt,
+      }) => {
         const now = Math.floor(Date.now() / 1000);
         const pc = now - 10;
         const ps = pc - Math.floor(Math.random() * 5) - 5;
@@ -60,6 +112,7 @@ export class WereadProvider extends BaseWebviewProvider {
           web_book_read,
           bookId,
           chapterUid,
+          chapterIdx,
           0,
           0,
           pc,
@@ -193,9 +246,35 @@ export class WereadProvider extends BaseWebviewProvider {
         }
 
         case "WEREAD_READ_SESSION_START": {
-          const { bookId, chapterUid, format } = payload || {};
-          if (!bookId || chapterUid == null) break;
-          await this.readReporter.start(bookId, chapterUid, format || "epub");
+          const { bookId, chapterUid, chapterIdx, format } = payload || {};
+          const normalizedChapterIdx = parseChapterIdx(chapterIdx);
+          if (
+            !bookId ||
+            chapterUid == null ||
+            normalizedChapterIdx == null
+          ) {
+            this.wereadLog(
+              "warn",
+              "START 缺少有效的 bookId/chapterUid/chapterIdx，忽略",
+              {
+                bookId,
+                chapterUid,
+                chapterIdx,
+                format,
+              },
+            );
+            break;
+          }
+          await this.readReporter.start(
+            bookId,
+            chapterUid,
+            format || "epub",
+            normalizedChapterIdx,
+          );
+          break;
+        }
+        case "WEREAD_READ_SESSION_SKIPPED": {
+          this.wereadLog("warn", "webview 未启动阅读会话", payload);
           break;
         }
         case "WEREAD_READ_SESSION_STOP": {
@@ -210,11 +289,13 @@ export class WereadProvider extends BaseWebviewProvider {
         default:
           break;
       }
-    } catch (error: any) {
-      console.error("[Weread] 处理消息失败:", error);
+    } catch (error: unknown) {
+      this.wereadLog("error", "处理消息失败", error);
       webviewView.webview.postMessage({
         command: "WEREAD_ERROR",
-        payload: { message: error.message || "请求失败" },
+        payload: {
+          message: error instanceof Error ? error.message : "请求失败",
+        },
       });
     }
   }

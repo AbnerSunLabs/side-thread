@@ -34,6 +34,7 @@ interface Book {
 
 interface Chapter {
   chapterUid: number;
+  chapterIdx?: number | string;
   title: string;
   level: number;
 }
@@ -61,6 +62,17 @@ interface Underline {
   range: string;
   count: number;
   type: number;
+}
+
+function parseChapterIdx(value: unknown): number | undefined {
+  if (
+    typeof value !== "number" &&
+    (typeof value !== "string" || value.trim() === "")
+  ) {
+    return undefined;
+  }
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : undefined;
 }
 
 /** 判断下标是否落在 HTML 标签内部（含属性） */
@@ -577,6 +589,7 @@ const App: React.FC = () => {
     enabled: view === "reader" && !loading && !!chapterContent,
     bookId: currentBook?.bookId,
     chapterUid: catalog[currentChapterIdx]?.chapterUid,
+    chapterIdx: parseChapterIdx(catalog[currentChapterIdx]?.chapterIdx),
     format: chapterContent?.format,
   });
 

@@ -2,12 +2,15 @@ export const READ_TIME_MAX_RT = 60;
 export const READ_TIME_MIN_RT = 1;
 export const READ_TIME_TICK_MS = 15_000;
 export const READ_TIME_IDLE_MS = 180_000;
+export const WEREAD_READER_TOKEN_FALLBACK =
+  "3c5c8717f3daf09iop3423zafeqoi";
 
 export type ReadPauseReason = "idle" | "visibility";
 
 export type ReadSession = {
   bookId: string;
   chapterUid: number;
+  chapterIdx: number;
   format: string;
   readerToken: string;
   lastTickAt: number;
@@ -32,6 +35,7 @@ export function capRt(seconds: number): number {
 export function createReadSession(input: {
   bookId: string;
   chapterUid: number;
+  chapterIdx?: number;
   format: string;
   readerToken: string;
   now: number;
@@ -39,6 +43,7 @@ export function createReadSession(input: {
   return {
     bookId: input.bookId,
     chapterUid: input.chapterUid,
+    chapterIdx: input.chapterIdx ?? 0,
     format: input.format,
     readerToken: input.readerToken,
     lastTickAt: input.now,
@@ -181,29 +186,100 @@ export function flushSession(
   };
 }
 
-export type ReadInitResult = { succ?: number; readerToken?: string };
+export type ReadInitResult = {
+  succ?: number | boolean | string;
+  synckey?: string | number;
+  readerToken?: string;
+  errCode?: number;
+  errMsg?: string;
+};
+
+/** 诊断日志：只打字段摘要，不输出 readerToken 原文 */
+function summarizeReadApiBody(body: unknown): Record<string, unknown> {
+  if (!body || typeof body !== "object") {
+    return { type: typeof body, value: body };
+  }
+  const rec = body as Record<string, unknown>;
+  const token = rec.readerToken;
+  return {
+    keys: Object.keys(rec),
+    succ: rec.succ,
+    hasReaderToken: typeof token === "string" && token.length > 0,
+    readerTokenLen: typeof token === "string" ? token.length : 0,
+    synckey: rec.synckey,
+    errCode:
+      rec.errCode ?? rec.errcode ?? rec.err_code ?? rec.errorCode ?? rec.code,
+    errMsg: rec.errMsg ?? rec.errmsg ?? rec.msg,
+  };
+}
+
+function isReadApiSuccess(body: unknown): boolean {
+  if (!body || typeof body !== "object") return false;
+  const rec = body as Record<string, unknown>;
+  const errorCode =
+    rec.errCode ?? rec.errcode ?? rec.err_code ?? rec.errorCode ?? rec.code;
+  if (errorCode != null && Number(errorCode) !== 0) return false;
+  const errorMessage = rec.errMsg ?? rec.errmsg ?? rec.errorMessage;
+  if (typeof errorMessage === "string" && errorMessage.trim() !== "") {
+    return false;
+  }
+  if (rec.succ != null) {
+    return rec.succ === 1 || rec.succ === true || rec.succ === "1";
+  }
+  return rec.synckey != null;
+}
 
 export type ReadReportParams = {
   bookId: string;
   chapterUid: number;
+  chapterIdx: number;
   format: string;
   readerToken: string;
   rt: number;
 };
 
+export type ReadReportResult = {
+  succ?: number | boolean | string;
+  synckey?: string | number;
+  errCode?: number;
+  errMsg?: string;
+};
+
+export type WereadLogLevel = "info" | "warn" | "error";
+
+export type WereadLogFn = (
+  level: WereadLogLevel,
+  message: string,
+  data?: unknown,
+) => void;
+
+function defaultWereadLog(
+  level: WereadLogLevel,
+  message: string,
+  data?: unknown,
+): void {
+  const args =
+    data === undefined ? [`[Weread] ${message}`] : [`[Weread] ${message}`, data];
+  if (level === "error") console.error(...args);
+  else if (level === "warn") console.warn(...args);
+  else console.info(...args);
+}
+
 export type WereadReadReporterDeps = {
   init: (
     bookId: string,
     chapterUid: number,
+    chapterIdx: number,
     format: string,
   ) => Promise<ReadInitResult>;
-  report: (params: ReadReportParams) => Promise<{ succ?: number }>;
+  report: (params: ReadReportParams) => Promise<ReadReportResult>;
   now?: () => number;
   setIntervalFn?: (
     handler: () => void,
     ms: number,
   ) => ReturnType<typeof setInterval>;
   clearIntervalFn?: (id: ReturnType<typeof setInterval>) => void;
+  log?: WereadLogFn;
 };
 
 export class WereadReadReporter {
@@ -215,11 +291,13 @@ export class WereadReadReporter {
   private readonly now: () => number;
   private readonly setIntervalFn: WereadReadReporterDeps["setIntervalFn"];
   private readonly clearIntervalFn: WereadReadReporterDeps["clearIntervalFn"];
+  private readonly log: WereadLogFn;
 
   constructor(private deps: WereadReadReporterDeps) {
     this.now = deps.now ?? (() => Date.now());
     this.setIntervalFn = deps.setIntervalFn ?? setInterval;
     this.clearIntervalFn = deps.clearIntervalFn ?? clearInterval;
+    this.log = deps.log ?? defaultWereadLog;
   }
 
   hasSession(): boolean {
@@ -245,37 +323,63 @@ export class WereadReadReporter {
     bookId: string,
     chapterUid: number,
     format: string,
+    chapterIdx = 0,
   ): Promise<void> {
+    this.log("info", "收到 START", {
+      bookId,
+      chapterUid,
+      chapterIdx,
+      format,
+    });
+    const generation = ++this.startGeneration;
     if (isSameChapter(this.session, bookId, chapterUid)) {
+      this.log("info", "同章 START，复用会话");
       this.resume();
       this.markActivity();
       return;
     }
-    await this.stop();
-    const generation = ++this.startGeneration;
+    await this.stopCurrentSession();
+    if (generation !== this.startGeneration) return;
     try {
-      const initRes = await this.deps.init(bookId, chapterUid, format);
-      if (generation !== this.startGeneration) return;
-      if (initRes?.succ !== 1 || !initRes.readerToken) {
-        console.error("[Weread] 阅读会话初始化失败", initRes);
+      const initRes = await this.deps.init(
+        bookId,
+        chapterUid,
+        chapterIdx,
+        format,
+      );
+      if (generation !== this.startGeneration) {
+        this.log("info", "init 回包已过期，丢弃", {
+          bookId,
+          chapterUid,
+        });
         return;
       }
+      const initSummary = summarizeReadApiBody(initRes);
+      if (!isReadApiSuccess(initRes)) {
+        this.log("error", "阅读会话初始化失败", initSummary);
+        return;
+      }
+      const readerToken =
+        initRes.readerToken || WEREAD_READER_TOKEN_FALLBACK;
       this.session = createReadSession({
         bookId,
         chapterUid,
+        chapterIdx,
         format,
-        readerToken: initRes.readerToken,
+        readerToken,
         now: this.now(),
       });
       this.ensureTimer();
+      this.log("info", "阅读会话已开始", initSummary);
     } catch (error) {
       if (generation !== this.startGeneration) return;
-      console.error("[Weread] 阅读会话初始化异常", error);
+      this.log("error", "阅读会话初始化异常", error);
     }
   }
 
   async pause(): Promise<void> {
     if (!this.session || this.session.paused) return;
+    this.log("info", "侧栏隐藏，暂停计时");
     const result = pauseSession(this.session, this.now());
     this.session = result.session;
     this.clearTimer();
@@ -284,8 +388,13 @@ export class WereadReadReporter {
 
   async stop(): Promise<void> {
     this.startGeneration += 1;
+    await this.stopCurrentSession();
+  }
+
+  private async stopCurrentSession(): Promise<void> {
     this.clearTimer();
     if (!this.session) return;
+    this.log("info", "会话 STOP，准备 flush");
     const result = flushSession(this.session, this.now());
     this.session = null;
     await this.reportIfNeeded(result);
@@ -322,19 +431,31 @@ export class WereadReadReporter {
   private async reportIfNeeded(result: SessionTickResult): Promise<void> {
     if (!result.reportSeconds) return;
     const snapshot = result.session;
+    this.log("info", "准备上报时长", {
+      bookId: snapshot.bookId,
+      chapterUid: snapshot.chapterUid,
+      chapterIdx: snapshot.chapterIdx,
+      format: snapshot.format,
+      rt: result.reportSeconds,
+      becameIdle: result.becameIdle,
+    });
     try {
       const reportRes = await this.deps.report({
         bookId: snapshot.bookId,
         chapterUid: snapshot.chapterUid,
+        chapterIdx: snapshot.chapterIdx,
         format: snapshot.format,
         readerToken: snapshot.readerToken,
         rt: result.reportSeconds,
       });
-      if (reportRes && reportRes.succ != null && reportRes.succ !== 1) {
-        console.error("[Weread] 阅读时长上报失败", reportRes);
+      const reportSummary = summarizeReadApiBody(reportRes);
+      if (!isReadApiSuccess(reportRes)) {
+        this.log("error", "阅读时长上报失败", reportSummary);
+        return;
       }
+      this.log("info", "阅读时长上报完成", reportSummary);
     } catch (error) {
-      console.error("[Weread] 阅读时长上报失败", error);
+      this.log("error", "阅读时长上报失败", error);
     }
   }
 }

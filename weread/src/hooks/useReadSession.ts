@@ -7,23 +7,43 @@ export function useReadSession(input: {
   enabled: boolean;
   bookId?: string;
   chapterUid?: number;
+  chapterIdx?: number;
   format?: string;
 }): void {
-  const { enabled, bookId, chapterUid, format } = input;
+  const { enabled, bookId, chapterUid, chapterIdx, format } = input;
   const lastActivityAtRef = useRef(0);
 
   useEffect(() => {
-    if (!enabled || !bookId || chapterUid == null || !format) return;
+    if (
+      !enabled ||
+      !bookId ||
+      chapterUid == null ||
+      chapterIdx == null ||
+      !format
+    ) {
+      if (enabled) {
+        vscode.postMessage({
+          command: "WEREAD_READ_SESSION_SKIPPED",
+          payload: {
+            hasBookId: Boolean(bookId),
+            chapterUid,
+            chapterIdx,
+            hasFormat: Boolean(format),
+          },
+        });
+      }
+      return;
+    }
 
     vscode.postMessage({
       command: "WEREAD_READ_SESSION_START",
-      payload: { bookId, chapterUid, format },
+      payload: { bookId, chapterUid, chapterIdx, format },
     });
 
     return () => {
       vscode.postMessage({ command: "WEREAD_READ_SESSION_STOP" });
     };
-  }, [enabled, bookId, chapterUid, format]);
+  }, [enabled, bookId, chapterUid, chapterIdx, format]);
 
   useEffect(() => {
     if (!enabled) return;
