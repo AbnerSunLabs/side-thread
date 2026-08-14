@@ -50,10 +50,10 @@ export class XiaoyuzhouProvider extends BaseWebviewProvider {
 
     workspace.onDidChangeConfiguration((e) => {
       if (
-        e.affectsConfiguration("touchfish.xiaoyuzhouAccessToken") ||
-        e.affectsConfiguration("touchfish.xiaoyuzhouRefreshToken") ||
-        e.affectsConfiguration("touchfish.xiaoyuzhouUserInfo") ||
-        e.affectsConfiguration("touchfish.xiaoyuzhouDeviceId")
+        e.affectsConfiguration("sidethread.xiaoyuzhouAccessToken") ||
+        e.affectsConfiguration("sidethread.xiaoyuzhouRefreshToken") ||
+        e.affectsConfiguration("sidethread.xiaoyuzhouUserInfo") ||
+        e.affectsConfiguration("sidethread.xiaoyuzhouDeviceId")
       ) {
         this.syncAuthFromConfig();
         void this.notifyAuthState();
@@ -73,7 +73,7 @@ export class XiaoyuzhouProvider extends BaseWebviewProvider {
   }
 
   private syncAuthFromConfig() {
-    const config = workspace.getConfiguration("touchfish");
+    const config = workspace.getConfiguration("sidethread");
     const accessToken = (config.get<string>("xiaoyuzhouAccessToken") || "").trim();
     const refreshToken = (config.get<string>("xiaoyuzhouRefreshToken") || "").trim();
     const rawUserInfo = (config.get<string>("xiaoyuzhouUserInfo") || "").trim();
@@ -140,7 +140,7 @@ export class XiaoyuzhouProvider extends BaseWebviewProvider {
     console.log("[xiaoyuzhouProvider] Memory state cleared");
 
     // 获取当前配置用于对比
-    const configBefore = workspace.getConfiguration("touchfish");
+    const configBefore = workspace.getConfiguration("sidethread");
     const accessTokenBefore = configBefore.get<string>("xiaoyuzhouAccessToken");
     console.log("[xiaoyuzhouProvider] Before clear - has accessToken:", !!accessTokenBefore);
 
@@ -155,7 +155,7 @@ export class XiaoyuzhouProvider extends BaseWebviewProvider {
       console.log("[xiaoyuzhouProvider] setConfigByKey calls completed");
 
       // 验证配置是否被清除
-      const configAfter = workspace.getConfiguration("touchfish");
+      const configAfter = workspace.getConfiguration("sidethread");
       const accessTokenAfter = configAfter.get<string>("xiaoyuzhouAccessToken");
       const refreshTokenAfter = configAfter.get<string>("xiaoyuzhouRefreshToken");
 
@@ -486,7 +486,7 @@ export class XiaoyuzhouProvider extends BaseWebviewProvider {
           const { title, lyric, isPlaying } = payload || {};
           this.isPlaying = Boolean(isPlaying);
           
-          const config = workspace.getConfiguration("touchfish");
+          const config = workspace.getConfiguration("sidethread");
           const showLyric = config.get<boolean>("xiaoyuzhouStatusBarShowLyric", true);
           
           if (title) {

@@ -1,7 +1,7 @@
 {
 	"publisher": "ylw",
-	"name": "touchfish",
-	"displayName": "TouchFish",
+	"name": "side-thread",
+	"displayName": "SideThread",
 	"description": "微信读书、小宇宙播客摸鱼插件",
 	"version": "17.10.0",
 	"icon": "logo.png",
@@ -15,6 +15,8 @@
 	"license": "SEE LICENSE IN LICENSE.txt",
 	"keywords": [
 		"摸鱼",
+		"sidethread",
+		"side-thread",
 		"xiaoyuzhou",
 		"小宇宙",
 		"播客",
@@ -34,52 +36,52 @@
 			}
 		],
 		"configuration": {
-			"title": "touchfish",
+			"title": "SideThread",
 			"properties": {
-				"touchfish.showImg": {
+				"sidethread.showImg": {
 					"type": "boolean",
 					"default": true,
 					"description": "是否显示图片"
 				},
-				"touchfish.fontSize": {
+				"sidethread.fontSize": {
 					"type": "number",
 					"default": 14,
 					"description": "全局字体大小"
 				},
-				"touchfish.xiaoyuzhouAccessToken": {
+				"sidethread.xiaoyuzhouAccessToken": {
 					"type": "string",
 					"description": "小宇宙 Access Token (x-jike-access-token)"
 				},
-				"touchfish.xiaoyuzhouRefreshToken": {
+				"sidethread.xiaoyuzhouRefreshToken": {
 					"type": "string",
 					"description": "小宇宙 Refresh Token (x-jike-refresh-token)"
 				},
-				"touchfish.xiaoyuzhouUserInfo": {
+				"sidethread.xiaoyuzhouUserInfo": {
 					"type": "string",
 					"default": "",
 					"description": "缓存的小宇宙用户信息 (JSON)"
 				},
-				"touchfish.xiaoyuzhouDeviceId": {
+				"sidethread.xiaoyuzhouDeviceId": {
 					"type": "string",
 					"default": "",
 					"description": "小宇宙设备 ID"
 				},
-				"touchfish.xiaoyuzhouStatusBarShowLyric": {
+				"sidethread.xiaoyuzhouStatusBarShowLyric": {
 					"type": "boolean",
 					"default": true,
 					"description": "是否在状态栏显示小宇宙播客字幕(关闭则显示标题名)"
 				},
-				"touchfish.enableXiaoyuzhou": {
+				"sidethread.enableXiaoyuzhou": {
 					"type": "boolean",
 					"default": true,
 					"description": "启用小宇宙模块"
 				},
-				"touchfish.enableWeread": {
+				"sidethread.enableWeread": {
 					"type": "boolean",
 					"default": true,
 					"description": "启用微信读书模块"
 				},
-				"touchfish.wereadCookie": {
+				"sidethread.wereadCookie": {
 					"type": "string",
 					"description": "微信读书 Cookie"
 				}
@@ -89,15 +91,15 @@
 			"activitybar": [
 				{
 					"id": "xiaoyuzhou",
-					"title": "TouchFish-Xiaoyuzhou",
+					"title": "SideThread-Xiaoyuzhou",
 					"icon": "assets/xiaoyuzhou.svg",
-					"when": "config.touchfish.enableXiaoyuzhou"
+					"when": "config.sidethread.enableXiaoyuzhou"
 				},
 				{
 					"id": "weread",
-					"title": "TouchFish-Weread",
+					"title": "SideThread-Weread",
 					"icon": "assets/weread.svg",
-					"when": "config.touchfish.enableWeread"
+					"when": "config.sidethread.enableWeread"
 				}
 			]
 		},
@@ -108,7 +110,7 @@
 					"type": "webview",
 					"name": "小宇宙",
 					"id": "xiaoyuzhou",
-					"when": "config.touchfish.enableXiaoyuzhou"
+					"when": "config.sidethread.enableXiaoyuzhou"
 				}
 			],
 			"weread": [
@@ -117,48 +119,48 @@
 					"type": "webview",
 					"name": "微信读书",
 					"id": "weread",
-					"when": "config.touchfish.enableWeread"
+					"when": "config.sidethread.enableWeread"
 				}
 			]
 		},
 		"commands": [
 			{
-				"command": "touchfish.openXiaoyuzhou",
+				"command": "sidethread.openXiaoyuzhou",
 				"title": "打开小宇宙",
 				"icon": "$(radio-tower)"
 			},
 			{
-				"command": "touchfish.setXiaoyuzhouToken",
+				"command": "sidethread.setXiaoyuzhouToken",
 				"title": "设置小宇宙凭据",
 				"icon": "$(settings-gear)"
 			},
 			{
-				"command": "touchfish.music.openActive",
+				"command": "sidethread.music.openActive",
 				"title": "打开当前播放器",
 				"icon": "$(play-circle)"
 			},
 			{
-				"command": "touchfish.music.playPause",
+				"command": "sidethread.music.playPause",
 				"title": "播放/暂停",
 				"icon": "$(play)"
 			},
 			{
-				"command": "touchfish.music.next",
+				"command": "sidethread.music.next",
 				"title": "下一集",
 				"icon": "$(chevron-right)"
 			},
 			{
-				"command": "touchfish.xiaoyuzhou.playPause",
+				"command": "sidethread.xiaoyuzhou.playPause",
 				"title": "播放/暂停",
 				"icon": "$(play)"
 			},
 			{
-				"command": "touchfish.xiaoyuzhou.nextEpisode",
+				"command": "sidethread.xiaoyuzhou.nextEpisode",
 				"title": "下一集",
 				"icon": "$(chevron-right)"
 			},
 			{
-				"command": "touchfish.setWereadCookie",
+				"command": "sidethread.setWereadCookie",
 				"title": "设置微信读书Cookie",
 				"icon": "$(settings-gear)"
 			}
@@ -166,12 +168,12 @@
 		"menus": {
 			"view/title": [
 				{
-					"command": "touchfish.setXiaoyuzhouToken",
+					"command": "sidethread.setXiaoyuzhouToken",
 					"when": "view == xiaoyuzhou",
 					"group": "navigation"
 				},
 				{
-					"command": "touchfish.setWereadCookie",
+					"command": "sidethread.setWereadCookie",
 					"when": "view == weread",
 					"group": "navigation"
 				}
@@ -188,12 +190,13 @@
 		"pretest": "pnpm compile-tests && pnpm compile && pnpm lint",
 		"lint": "eslint src --ext ts",
 		"test": "mocha \"out/src/test/**/*.test.js\"",
-		"build": "vsce package --no-dependencies",
+		"vsix": "pnpm build-webviews && pnpm package && vsce package --no-dependencies",
+		"build": "pnpm vsix",
 		"changelog": "standard-version",
 		"publish": "vsce publish --no-dependencies && ovsx publish --no-dependencies",
 		"unpublish": "vsce unpublish && ovsx unpublish",
 		"build-webviews": "pnpm --filter xiaoyuzhou build && pnpm --filter weread build",
-		"build-publish": "pnpm build-webviews && pnpm package && pnpm changelog && pnpm run publish",
+		"build-publish": "pnpm vsix && pnpm changelog && pnpm run publish",
 		"dev": "concurrently -n XIAOYUZHOU,WEREAD -c white,blue \"pnpm --filter xiaoyuzhou dev\" \"pnpm --filter weread dev\""
 	},
 	"devDependencies": {
@@ -224,6 +227,6 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/ylw1997/touchFish.git"
+		"url": "https://github.com/AbnerSunLabs/side-thread.git"
 	}
 }

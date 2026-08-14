@@ -3,7 +3,7 @@
  * @Date: 2025-08-04 18:02:41
  * @LastEditTime: 2025-10-22 12:10:27
  * @LastEditors: YangLiwei 1280426581@qq.com
- * @FilePath: \touchfish\webpack.config.js
+ * @FilePath: \side-thread\webpack.config.js
  * Copyright (c) 2025 by YangLiwei, All Rights Reserved.
  * @Description:
  */

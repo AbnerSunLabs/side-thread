@@ -18,8 +18,9 @@ weread/dist
 netease/dist
 douyin/dist
 
-# Old releases
+# Old / current vsix names
 touchfish-*.vsix
+side-thread-*.vsix
 xapi/
 APIS/
 .claude/

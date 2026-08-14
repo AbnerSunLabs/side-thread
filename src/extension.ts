@@ -3,7 +3,7 @@
  * @Date: 2022-05-18 10:26:57
  * @LastEditTime: 2026-08-06 09:47:00
  * @LastEditors: YangLiwei 1280426581@qq.com
- * @FilePath: \touchfish\src\extension.ts
+ * @FilePath: \side-thread\src\extension.ts
  * @Description:
  */
 
@@ -18,7 +18,7 @@ import { WereadProvider } from "./Providers/wereadProvider";
 import ContextManager from "./utils/extensionContext";
 import { Uri } from "vscode";
 import * as fs from "fs";
-import { setConfigByKey } from "./core/config";
+import { setConfigByKey, migrateLegacyTouchfishSettings } from "./core/config";
 
 function createLazyWebviewProvider<T extends vscode.WebviewViewProvider>(
   factory: () => T,
@@ -42,6 +42,7 @@ function createLazyWebviewProvider<T extends vscode.WebviewViewProvider>(
 
 export function activate(context: vscode.ExtensionContext) {
   ContextManager.initialize(context);
+  void migrateLegacyTouchfishSettings();
 
   const xiaoyuzhouProvider = createLazyWebviewProvider(
     () => new XiaoyuzhouProvider(context),
@@ -72,7 +73,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(openSetting);
   context.subscriptions.push(setXiaoyuzhouTokenCommand());
   context.subscriptions.push(
-    vscode.commands.registerCommand("touchfish.setWereadCookie", async () => {
+    vscode.commands.registerCommand("sidethread.setWereadCookie", async () => {
       const cookie = await vscode.window.showInputBox({
         prompt: "请输入微信读书 Cookie",
         placeHolder: "wr_skey=...; wr_vid=...;",
@@ -86,37 +87,37 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("touchfish.openXiaoyuzhou", async () => {
+    vscode.commands.registerCommand("sidethread.openXiaoyuzhou", async () => {
       await vscode.commands.executeCommand("xiaoyuzhou.focus");
     }),
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("touchfish.music.openActive", async () => {
+    vscode.commands.registerCommand("sidethread.music.openActive", async () => {
       await vscode.commands.executeCommand("xiaoyuzhou.focus");
     }),
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("touchfish.music.playPause", async () => {
+    vscode.commands.registerCommand("sidethread.music.playPause", async () => {
       xiaoyuzhouProvider.getInstance()["sendPlayPauseCommand"]?.();
     }),
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("touchfish.music.next", async () => {
+    vscode.commands.registerCommand("sidethread.music.next", async () => {
       xiaoyuzhouProvider.getInstance()["sendNextEpisodeCommand"]?.();
     }),
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("touchfish.xiaoyuzhou.playPause", async () => {
+    vscode.commands.registerCommand("sidethread.xiaoyuzhou.playPause", async () => {
       xiaoyuzhouProvider.getInstance()["sendPlayPauseCommand"]?.();
     }),
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("touchfish.xiaoyuzhou.nextEpisode", async () => {
+    vscode.commands.registerCommand("sidethread.xiaoyuzhou.nextEpisode", async () => {
       xiaoyuzhouProvider.getInstance()["sendNextEpisodeCommand"]?.();
     }),
   );

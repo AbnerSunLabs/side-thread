@@ -961,7 +961,7 @@ function App() {
       </Drawer>
 
       <FloatButton.BackTop
-        className="touchfish-float-backtop"
+        className="sidethread-float-backtop"
         style={{ insetInlineEnd: 24, bottom: currentEpisode ? 32 : 24 }}
         visibilityHeight={500}
         duration={1000}
@@ -969,7 +969,7 @@ function App() {
       />
       <div ref={groupRef}>
         <FloatButton
-          className="touchfish-float-refresh"
+          className="sidethread-float-refresh"
           style={{ insetInlineEnd: 24, bottom: currentEpisode ? 96 : 88 }}
           icon={<ReloadOutlined style={{ color: "#1890ff" }} />}
           tooltip={{ title: "刷新" }}

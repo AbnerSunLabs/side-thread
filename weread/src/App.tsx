@@ -897,7 +897,7 @@ const App: React.FC = () => {
 
       {view === "reader" && (
         <FloatButton.BackTop
-          className="touchfish-float-backtop"
+          className="sidethread-float-backtop"
           style={{ insetInlineEnd: 24, bottom: 24 }}
           target={() =>
             document.querySelector(".reader-content") as HTMLElement
@@ -909,7 +909,7 @@ const App: React.FC = () => {
       )}
       <div ref={groupRef}>
         <FloatButton
-          className="touchfish-float-refresh"
+          className="sidethread-float-refresh"
           style={{ insetInlineEnd: 24, bottom: 88 }}
           icon={<ReloadOutlined style={{ color: "#1890ff" }} />}
           tooltip={<div>{view === "shelf" ? "刷新书架" : "刷新本章"}</div>}

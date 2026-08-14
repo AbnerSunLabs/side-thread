@@ -3,7 +3,7 @@
  * @Date: 2025-06-20 11:08:45
  * @LastEditTime: 2026-08-06 09:55:00
  * @LastEditors: YangLiwei 1280426581@qq.com
- * @FilePath: \touchfish\xiaoyuzhou\src\utils\index.ts
+ * @FilePath: \side-thread\xiaoyuzhou\src\utils\index.ts
  * Copyright (c) 2025 by YangLiwei, All Rights Reserved.
  * @Description:
  */

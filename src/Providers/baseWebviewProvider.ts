@@ -68,7 +68,7 @@ export abstract class BaseWebviewProvider
         // 图片显示开关
         if (command === "TOGGLE_SHOW_IMG") {
           const newState = !!payload;
-          const config = vscode.workspace.getConfiguration("touchfish");
+          const config = vscode.workspace.getConfiguration("sidethread");
           await config.update("showImg", newState, true);
           showInfo(`图片已设置为${newState ? "显示" : "隐藏"}`);
           if (this.options.imgToggledCommand) {
@@ -89,7 +89,7 @@ export abstract class BaseWebviewProvider
         }
         // 保存字体大小 conf
         if (command === "SAVE_FONT_SIZE") {
-          const config = vscode.workspace.getConfiguration("touchfish");
+          const config = vscode.workspace.getConfiguration("sidethread");
           await config.update("fontSize", payload, true); // true for global/workspace setting
           return;
         }
@@ -109,7 +109,7 @@ export abstract class BaseWebviewProvider
     });
 
     // showImg 配置注入
-    const config = vscode.workspace.getConfiguration("touchfish");
+    const config = vscode.workspace.getConfiguration("sidethread");
     let showImg = config.get("showImg") as boolean | undefined;
     if (showImg === undefined) showImg = true;
     let fontSize = config.get("fontSize") as number | undefined;

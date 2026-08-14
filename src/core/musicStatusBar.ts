@@ -29,9 +29,9 @@ export class MusicStatusBar implements Disposable {
     this.playPauseButton = window.createStatusBarItem(StatusBarAlignment.Left, 99);
     this.nextButton = window.createStatusBarItem(StatusBarAlignment.Left, 98);
 
-    this.statusBarItem.command = "touchfish.music.openActive";
-    this.playPauseButton.command = "touchfish.music.playPause";
-    this.nextButton.command = "touchfish.music.next";
+    this.statusBarItem.command = "sidethread.music.openActive";
+    this.playPauseButton.command = "sidethread.music.playPause";
+    this.nextButton.command = "sidethread.music.next";
 
     this.statusBarItem.text = "$(music) 小宇宙";
     this.playPauseButton.text = "$(debug-start)";

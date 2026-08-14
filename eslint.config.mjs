@@ -3,7 +3,7 @@
  * @Date: 2024-09-18 16:22:08
  * @LastEditTime: 2025-06-17 15:41:07
  * @LastEditors: YangLiwei 1280426581@qq.com
- * @FilePath: \touchfish\eslint.config.mjs
+ * @FilePath: \side-thread\eslint.config.mjs
  * Copyright (c) 2024 by yangliwei, All Rights Reserved. 
  * @Description: 
  */

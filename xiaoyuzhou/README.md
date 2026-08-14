@@ -1,4 +1,4 @@
-# TouchFish 小宇宙
+# SideThread 小宇宙
 
 编辑器内的小宇宙播客客户端，由主扩展 `xiaoyuzhouProvider` 转发接口。
 

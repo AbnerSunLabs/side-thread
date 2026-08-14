@@ -30,7 +30,7 @@ export class WereadProvider extends BaseWebviewProvider {
     });
 
     const cookie =
-      workspace.getConfiguration("touchfish").get<string>("wereadCookie") || "";
+      workspace.getConfiguration("sidethread").get<string>("wereadCookie") || "";
 
     this.client = new WeReadClient({ cookie }, async (newCookie) => {
       await setConfigByKey("wereadCookie", newCookie);
@@ -73,9 +73,9 @@ export class WereadProvider extends BaseWebviewProvider {
 
     context.subscriptions.push(
       workspace.onDidChangeConfiguration((event) => {
-        if (!event.affectsConfiguration("touchfish.wereadCookie")) return;
+        if (!event.affectsConfiguration("sidethread.wereadCookie")) return;
         const configuredCookie =
-          workspace.getConfiguration("touchfish").get<string>("wereadCookie") || "";
+          workspace.getConfiguration("sidethread").get<string>("wereadCookie") || "";
         this.client.setCookie(configuredCookie);
       }),
     );
