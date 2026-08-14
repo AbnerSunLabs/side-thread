@@ -62,7 +62,7 @@ describe("weread readSession", () => {
     const idle = tickSession(active, 1_000 + 5_000 + READ_TIME_IDLE_MS);
     assert.equal(idle.becameIdle, true);
     assert.equal(idle.session.paused, true);
-    assert.ok((idle.reportSeconds ?? 0) <= 60);
+    assert.equal(idle.reportSeconds, 5);
     const leftover = idle.session.unreportedMs;
     const later = tickSession(
       idle.session,
@@ -87,6 +87,13 @@ describe("weread readSession", () => {
     const flushed = flushSession(ticked.session, 1_000 + 90_000);
     assert.equal(ticked.reportSeconds, 60);
     assert.equal(flushed.reportSeconds, 30);
+    assert.equal(flushed.session.unreportedMs, 0);
+  });
+
+  it("flush of an unticked 61s session reports 60s once", () => {
+    const started = sessionAt(1_000);
+    const flushed = flushSession(started, 1_000 + 61_000);
+    assert.equal(flushed.reportSeconds, 60);
     assert.equal(flushed.session.unreportedMs, 0);
   });
 

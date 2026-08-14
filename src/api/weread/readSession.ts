@@ -149,10 +149,11 @@ export function flushSession(
   session: ReadSession,
   now: number,
 ): SessionTickResult {
-  const ticked = session.paused
-    ? { session, reportSeconds: null, becameIdle: false }
-    : tickSession(session, now);
-  const reported = takeReport(ticked.session);
+  // flush 是一次性收尾：不走 tickSession 的「满 60 报 60 留余数」周期逻辑，
+  // 否则内部 tick 报出的 60s 会被丢弃，导致少报。这里把最后一段直接累计进
+  // unreportedMs，再交给 takeReport 一次性 cap 到 60 上报。
+  const accumulated = session.paused ? session : accumulateUntil(session, now);
+  const reported = takeReport(accumulated);
   return {
     session: { ...reported.session, lastTickAt: now },
     reportSeconds: reported.reportSeconds,
