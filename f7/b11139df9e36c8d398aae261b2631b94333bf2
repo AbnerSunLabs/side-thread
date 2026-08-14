@@ -1,0 +1,23 @@
+src/Providers/wereadProvider.ts
+  s_78d52a14f36c9d::t_346ddac04deadb 39-73
+  s_78d52a14f36c9d::t_2c15a4427d4cd4 15,19
+  s_78d52a14f36c9d::t_25c54037220f2c 195-209
+  s_78d52a14f36c9d::t_0ceaca744ea002 125
+  s_78d52a14f36c9d::t_80307860e499e9 86-98
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "f7b11139df9e36c8d398aae261b2631b94333bf2",
+  "prompts": {},
+  "sessions": {
+    "s_78d52a14f36c9d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "14ad2651-987c-411d-ae22-141bf1f8b57d",
+        "model": "unknown"
+      },
+      "human_author": "AbnerSun <sunjj11@chinatelecom.cn>"
+    }
+  }
+}
