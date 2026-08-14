@@ -1,0 +1,19 @@
+README.md
+  s_78d52a14f36c9d::t_38f4da8e467291 36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "0653c561991c126a04eaa4c02712131cbe1ae74a",
+  "prompts": {},
+  "sessions": {
+    "s_78d52a14f36c9d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "14ad2651-987c-411d-ae22-141bf1f8b57d",
+        "model": "unknown"
+      },
+      "human_author": "AbnerSun <sunjj11@chinatelecom.cn>"
+    }
+  }
+}
