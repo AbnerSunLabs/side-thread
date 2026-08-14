@@ -1,0 +1,85 @@
+README.md
+  h_14565e8b179df6 3,5,9-11,16,22,29,49,52,64,66,68-73,79,114,129
+  s_47854fb36533ce::t_9bdc9a0fd22b6d 67
+src/extension.ts
+  h_14565e8b179df6 6,21,45,76,90,96,102,108,114,120
+.gitignore
+  h_14565e8b179df6 21,23
+logo.svg
+  h_14565e8b179df6 1-21
+CHANGELOG.md
+  h_245285a78fca97 3,5,9,13-16,20-22,26-27,31
+  s_47854fb36533ce::t_29ee8f4060ab9d 1
+.github/copilot-instructions.md
+  s_47854fb36533ce::t_cfc308ae777be8 1,6,11
+docs/superpowers/plans/2026-08-14-weread-reading-time-sync.md
+  s_47854fb36533ce::t_08e4912a8f1b9a 32
+docs/weread-reading-time.md
+  s_47854fb36533ce::t_9a409a81d2f4f5 14
+eslint.config.mjs
+  s_47854fb36533ce::t_fdcb0534abad6c 6
+package.json
+  s_47854fb36533ce::t_0529890b5b6e49 3-4,18-19,39,41,46,51,55,59,64,69,74,79,84,94,96,100,102,113,122,128,133,138,143,148,153,158,163,171,176,193-194,199,230
+src/Providers/baseWebviewProvider.ts
+  s_47854fb36533ce::t_89e78e610764fa 71,92,112
+src/Providers/wereadProvider.ts
+  s_47854fb36533ce::t_f92ae7e560475e 33,76,78
+src/Providers/xiaoyuzhouProvider.ts
+  s_47854fb36533ce::t_8b7d40ae4044de 53-56,76,143,158,489
+src/commands/commands.ts
+  s_47854fb36533ce::t_bcc9d700431d90 6,16,20,27
+src/config/index.ts
+  s_47854fb36533ce::t_18b4b2625e70d2 6,14
+src/core/config.ts
+  s_47854fb36533ce::t_ae44a2a5fcbc0a 3-18,20,26,30-44
+src/core/musicStatusBar.ts
+  s_47854fb36533ce::t_84a66d47afc65c 32-34
+webpack.config.js
+  s_47854fb36533ce::t_3d167ebd5e2fed 6
+weread/src/App.tsx
+  s_47854fb36533ce::t_f8f3accf5fb5c3 900,912
+weread/src/style/App.less
+  s_47854fb36533ce::t_0b3089286e83ef 353
+xiaoyuzhou/README.md
+  s_47854fb36533ce::t_8bb36480a27ef9 1
+xiaoyuzhou/eslint.config.js
+  s_47854fb36533ce::t_310d8bcb0c67e1 6
+xiaoyuzhou/src/App.tsx
+  s_47854fb36533ce::t_75cbac8e9634f4 964,972
+xiaoyuzhou/src/main.tsx
+  s_47854fb36533ce::t_3f08beda3fc159 6
+xiaoyuzhou/src/utils/index.ts
+  s_47854fb36533ce::t_718f599836cbf5 6
+xiaoyuzhou/src/utils/loader.tsx
+  s_47854fb36533ce::t_86f971ffce26c1 6
+xiaoyuzhou/src/utils/messageHandler.ts
+  s_47854fb36533ce::t_8ef11c17c98ed6 6
+xiaoyuzhou/src/utils/vscode.ts
+  s_47854fb36533ce::t_170093dfdba9c6 6
+xiaoyuzhou/vite.config.ts
+  s_47854fb36533ce::t_2b82639859d823 6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "56d9e3d3b15ef86626d68e579722e5638d091f0f",
+  "prompts": {},
+  "humans": {
+    "h_14565e8b179df6": {
+      "author": "AbnerSun <sunjj11@chinatelecom.cn>"
+    },
+    "h_245285a78fca97": {
+      "author": "AbnerSun <sunyujiejohn@sina.com>"
+    }
+  },
+  "sessions": {
+    "s_47854fb36533ce": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "d1938f3f-88de-44f7-b6f9-d2607cad0eab",
+        "model": "unknown"
+      },
+      "human_author": "AbnerSun <sunyujiejohn@sina.com>"
+    }
+  }
+}
