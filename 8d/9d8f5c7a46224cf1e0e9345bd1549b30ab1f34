@@ -1,0 +1,31 @@
+src/api/weread/readSession.ts
+  h_14565e8b179df6 6-7,17-18,48,63-65,103-104,110-111,145-146,158,174,213-214,231,233-235,255,258,272,281,286,315,326,333-335
+  s_47854fb36533ce::t_8ccee347fdc2a6 107-109,112,143-144,147
+src/Providers/wereadProvider.ts
+  s_47854fb36533ce::t_d0cf84372a4db5 134
+src/test/wereadReadSession.test.ts
+  s_47854fb36533ce::t_864ea20d1bf32a 60,66-68,74-93,121,128,329-407,410
+weread/src/App.tsx
+  s_47854fb36533ce::t_43fda23b3e98e1 163,178-181,309-338,406
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "8d9d8f5c7a46224cf1e0e9345bd1549b30ab1f34",
+  "prompts": {},
+  "humans": {
+    "h_14565e8b179df6": {
+      "author": "AbnerSun <sunjj11@chinatelecom.cn>"
+    }
+  },
+  "sessions": {
+    "s_47854fb36533ce": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "d1938f3f-88de-44f7-b6f9-d2607cad0eab",
+        "model": "unknown"
+      },
+      "human_author": "AbnerSun <sunjj11@chinatelecom.cn>"
+    }
+  }
+}
