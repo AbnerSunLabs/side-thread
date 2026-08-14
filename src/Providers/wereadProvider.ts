@@ -131,7 +131,7 @@ export class WereadProvider extends BaseWebviewProvider {
 
           webviewView.webview.postMessage({
             command: "WEREAD_CHAPTER_DATA",
-            payload: result,
+            payload: { ...result, bookId, chapterUid },
           });
           break;
         }

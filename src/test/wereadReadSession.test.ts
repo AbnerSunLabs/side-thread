@@ -57,20 +57,40 @@ describe("weread readSession", () => {
     assert.equal(later.session.unreportedMs, paused.session.unreportedMs);
   });
 
-  it("idle timeout stops accumulating at last activity and flushes at most 60s", () => {
+  it("idle timeout counts the grace period then stops", () => {
     const started = sessionAt(1_000);
     const active = markActivity(started, 1_000 + 5_000);
     const idle = tickSession(active, 1_000 + 5_000 + READ_TIME_IDLE_MS);
     assert.equal(idle.becameIdle, true);
     assert.equal(idle.session.paused, true);
-    assert.equal(idle.reportSeconds, 5);
-    const leftover = idle.session.unreportedMs;
+    assert.equal(idle.session.pauseReason, "idle");
+    assert.equal(idle.reportSeconds, 60);
+    assert.equal(idle.session.unreportedMs, 0);
     const later = tickSession(
       idle.session,
       1_000 + 5_000 + READ_TIME_IDLE_MS + 60_000,
     );
     assert.equal(later.reportSeconds, null);
-    assert.equal(later.session.unreportedMs, leftover);
+    assert.equal(later.session.unreportedMs, 0);
+  });
+
+  it("activity after idle resumes counting", () => {
+    const started = sessionAt(1_000);
+    const idle = tickSession(started, 1_000 + READ_TIME_IDLE_MS);
+    const resumed = markActivity(idle.session, 5_000_000);
+    assert.equal(resumed.paused, false);
+    const ticked = tickSession(resumed, 5_000_000 + 60_000);
+    assert.equal(ticked.reportSeconds, 60);
+  });
+
+  it("activity after visibility pause does not resume", () => {
+    const started = sessionAt(1_000);
+    const paused = pauseSession(started, 1_000 + 10_000);
+    assert.equal(paused.session.pauseReason, "visibility");
+    const active = markActivity(paused.session, 1_000 + 20_000);
+    assert.equal(active.paused, true);
+    const later = tickSession(active, 1_000 + 80_000);
+    assert.equal(later.reportSeconds, null);
   });
 
   it("flush reports remaining seconds once and clears unreportedMs", () => {
@@ -98,14 +118,14 @@ describe("weread readSession", () => {
     assert.equal(flushed.session.unreportedMs, 0);
   });
 
-  it("flush of an idle-but-not-paused session does not count idle time", () => {
+  it("flush of an idle-but-not-paused session counts grace then caps at 60s", () => {
     const started = sessionAt(1_000);
     const active = markActivity(started, 1_000 + 5_000);
     const flushed = flushSession(
       active,
       1_000 + 5_000 + READ_TIME_IDLE_MS + 60_000,
     );
-    assert.equal(flushed.reportSeconds, 5);
+    assert.equal(flushed.reportSeconds, 60);
     assert.equal(flushed.session.unreportedMs, 0);
   });
 
@@ -306,9 +326,87 @@ describe("WereadReadReporter", () => {
     await reporter.markActivity();
     now = 6_000 + READ_TIME_IDLE_MS;
     await intervals[0]();
-    assert.deepEqual(reports, [5]);
+    assert.deepEqual(reports, [60]);
     now += 60_000;
     await reporter.stop();
-    assert.deepEqual(reports, [5]);
+    assert.deepEqual(reports, [60]);
+  });
+
+  it("discards init after stop during in-flight start", async () => {
+    let resolveInit!: (value: { succ: number; readerToken: string }) => void;
+    let signalInitStarted!: () => void;
+    const initStarted = new Promise<void>(resolve => {
+      signalInitStarted = resolve;
+    });
+    const reporter = new WereadReadReporter({
+      now: () => 1,
+      init: async () => {
+        signalInitStarted();
+        return new Promise(resolve => {
+          resolveInit = resolve;
+        });
+      },
+      report: async () => ({ succ: 1 }),
+      setIntervalFn: () => 1 as unknown as ReturnType<typeof setInterval>,
+      clearIntervalFn: () => undefined,
+    });
+
+    const startPromise = reporter.start("b1", 12, "epub");
+    await initStarted;
+    await reporter.stop();
+    resolveInit({ succ: 1, readerToken: "tok" });
+    await startPromise;
+    assert.equal(reporter.hasSession(), false);
+  });
+
+  it("activity after idle resume continues reporting", async () => {
+    let now = 1_000;
+    const reports: number[] = [];
+    const intervals: Array<() => void | Promise<void>> = [];
+    const reporter = new WereadReadReporter({
+      now: () => now,
+      init: async () => ({ succ: 1, readerToken: "tok" }),
+      report: async ({ rt }) => {
+        reports.push(rt);
+        return { succ: 1 };
+      },
+      setIntervalFn: handler => {
+        intervals.push(handler);
+        return 1 as unknown as ReturnType<typeof setInterval>;
+      },
+      clearIntervalFn: () => undefined,
+    });
+    await reporter.start("b1", 12, "epub");
+    now += READ_TIME_IDLE_MS;
+    await intervals[0]();
+    assert.deepEqual(reports, [60]);
+    now += 10_000;
+    reporter.markActivity();
+    now += 60_000;
+    await reporter.stop();
+    assert.deepEqual(reports, [60, 60]);
+  });
+
+  it("visibility pause ignores activity until resume", async () => {
+    let now = 1_000;
+    const reports: number[] = [];
+    const reporter = new WereadReadReporter({
+      now: () => now,
+      init: async () => ({ succ: 1, readerToken: "tok" }),
+      report: async ({ rt }) => {
+        reports.push(rt);
+        return { succ: 1 };
+      },
+      setIntervalFn: () => 1 as unknown as ReturnType<typeof setInterval>,
+      clearIntervalFn: () => undefined,
+    });
+    await reporter.start("b1", 12, "epub");
+    now += 10_000;
+    await reporter.pause();
+    now += 50_000;
+    reporter.markActivity();
+    now += 60_000;
+    await reporter.stop();
+    assert.deepEqual(reports, [10]);
   });
 });

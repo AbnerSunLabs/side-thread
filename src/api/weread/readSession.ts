@@ -3,6 +3,8 @@ export const READ_TIME_MIN_RT = 1;
 export const READ_TIME_TICK_MS = 15_000;
 export const READ_TIME_IDLE_MS = 180_000;
 
+export type ReadPauseReason = "idle" | "visibility";
+
 export type ReadSession = {
   bookId: string;
   chapterUid: number;
@@ -12,6 +14,8 @@ export type ReadSession = {
   lastActivityAt: number;
   unreportedMs: number;
   paused: boolean;
+  /** idle 与侧栏隐藏共用 paused，但只有 idle 允许被 ACTIVITY 唤醒 */
+  pauseReason: ReadPauseReason | null;
 };
 
 export type SessionTickResult = {
@@ -41,6 +45,7 @@ export function createReadSession(input: {
     lastActivityAt: input.now,
     unreportedMs: 0,
     paused: false,
+    pauseReason: null,
   };
 }
 
@@ -55,6 +60,9 @@ export function isSameChapter(
 }
 
 export function markActivity(session: ReadSession, now: number): ReadSession {
+  if (session.paused && session.pauseReason === "idle") {
+    return resumeSession(session, now);
+  }
   return { ...session, lastActivityAt: now };
 }
 
@@ -92,13 +100,16 @@ export function tickSession(
 
   const idleAt = session.lastActivityAt + READ_TIME_IDLE_MS;
   if (now >= idleAt) {
-    const accumulated = accumulateUntil(
-      session,
-      Math.max(session.lastTickAt, session.lastActivityAt),
-    );
+    // 宽限期内仍计时（对齐「挂机约 3 分钟后停止」），超时后不再计入
+    const accumulated = accumulateUntil(session, idleAt);
     const flushed = takeReport(accumulated);
     return {
-      session: { ...flushed.session, paused: true, lastTickAt: now },
+      session: {
+        ...flushed.session,
+        paused: true,
+        pauseReason: "idle",
+        lastTickAt: now,
+      },
       reportSeconds: flushed.reportSeconds,
       becameIdle: true,
     };
@@ -129,7 +140,11 @@ export function pauseSession(
   }
   const ticked = tickSession({ ...session, lastActivityAt: now }, now);
   return {
-    session: { ...ticked.session, paused: true },
+    session: {
+      ...ticked.session,
+      paused: true,
+      pauseReason: "visibility",
+    },
     reportSeconds: ticked.reportSeconds,
     becameIdle: false,
   };
@@ -140,6 +155,7 @@ export function resumeSession(session: ReadSession, now: number): ReadSession {
   return {
     ...session,
     paused: false,
+    pauseReason: null,
     lastTickAt: now,
     lastActivityAt: now,
   };
@@ -155,13 +171,7 @@ export function flushSession(
   let accumulated = session;
   if (!session.paused) {
     const idleAt = session.lastActivityAt + READ_TIME_IDLE_MS;
-    // 与 tickSession 的 idle 分支保持一致：空闲时只累计到活动结束点，
-    // 不把 180s 挂机 grace period 及之后的时间算进去。
-    const until =
-      now >= idleAt
-        ? Math.max(session.lastTickAt, session.lastActivityAt)
-        : now;
-    accumulated = accumulateUntil(session, until);
+    accumulated = accumulateUntil(session, Math.min(now, idleAt));
   }
   const reported = takeReport(accumulated);
   return {
@@ -200,6 +210,8 @@ export class WereadReadReporter {
   private session: ReadSession | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
   private ticking = false;
+  /** stop/新 start 会递增，用来丢弃仍在飞行的 init */
+  private startGeneration = 0;
   private readonly now: () => number;
   private readonly setIntervalFn: WereadReadReporterDeps["setIntervalFn"];
   private readonly clearIntervalFn: WereadReadReporterDeps["clearIntervalFn"];
@@ -216,7 +228,11 @@ export class WereadReadReporter {
 
   markActivity(): void {
     if (!this.session) return;
+    const wasIdle = this.session.pauseReason === "idle";
     this.session = markActivity(this.session, this.now());
+    if (wasIdle && !this.session.paused) {
+      this.ensureTimer();
+    }
   }
 
   resume(): void {
@@ -236,8 +252,10 @@ export class WereadReadReporter {
       return;
     }
     await this.stop();
+    const generation = ++this.startGeneration;
     try {
       const initRes = await this.deps.init(bookId, chapterUid, format);
+      if (generation !== this.startGeneration) return;
       if (initRes?.succ !== 1 || !initRes.readerToken) {
         console.error("[Weread] 阅读会话初始化失败", initRes);
         return;
@@ -251,6 +269,7 @@ export class WereadReadReporter {
       });
       this.ensureTimer();
     } catch (error) {
+      if (generation !== this.startGeneration) return;
       console.error("[Weread] 阅读会话初始化异常", error);
     }
   }
@@ -259,10 +278,12 @@ export class WereadReadReporter {
     if (!this.session || this.session.paused) return;
     const result = pauseSession(this.session, this.now());
     this.session = result.session;
+    this.clearTimer();
     await this.reportIfNeeded(result);
   }
 
   async stop(): Promise<void> {
+    this.startGeneration += 1;
     this.clearTimer();
     if (!this.session) return;
     const result = flushSession(this.session, this.now());
@@ -291,6 +312,7 @@ export class WereadReadReporter {
     try {
       const result = tickSession(this.session, this.now());
       this.session = result.session;
+      if (this.session.paused) this.clearTimer();
       await this.reportIfNeeded(result);
     } finally {
       this.ticking = false;
@@ -301,13 +323,16 @@ export class WereadReadReporter {
     if (!result.reportSeconds) return;
     const snapshot = result.session;
     try {
-      await this.deps.report({
+      const reportRes = await this.deps.report({
         bookId: snapshot.bookId,
         chapterUid: snapshot.chapterUid,
         format: snapshot.format,
         readerToken: snapshot.readerToken,
         rt: result.reportSeconds,
       });
+      if (reportRes && reportRes.succ != null && reportRes.succ !== 1) {
+        console.error("[Weread] 阅读时长上报失败", reportRes);
+      }
     } catch (error) {
       console.error("[Weread] 阅读时长上报失败", error);
     }

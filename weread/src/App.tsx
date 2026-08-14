@@ -160,6 +160,7 @@ const App: React.FC = () => {
   const currentChapterUidRef = useRef<number | null>(null);
   const pendingUidRef = useRef<number | null>(null);
   const hasReceivedProgressRef = useRef<boolean>(false);
+  const viewRef = useRef<"shelf" | "reader">(view);
 
   useEffect(() => {
     catalogRef.current = catalog;
@@ -173,6 +174,10 @@ const App: React.FC = () => {
     currentChapterUidRef.current =
       catalog[currentChapterIdx]?.chapterUid ?? null;
   }, [catalog, currentChapterIdx]);
+
+  useEffect(() => {
+    viewRef.current = view;
+  }, [view]);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -258,7 +263,6 @@ const App: React.FC = () => {
                   payload.data[0].bookId,
                   idx,
                   chapters,
-                  true,
                 );
                 pendingUidRef.current = null;
               } else if (!hasReceivedProgressRef.current) {
@@ -273,7 +277,6 @@ const App: React.FC = () => {
                   payload.data[0].bookId,
                   0,
                   chapters,
-                  true,
                 );
               }
             }
@@ -295,7 +298,6 @@ const App: React.FC = () => {
                 payload.bookId || payload.book?.bookId,
                 idx,
                 currentCatalog,
-                true,
               );
             }
           } else {
@@ -304,6 +306,36 @@ const App: React.FC = () => {
           break;
         }
         case "WEREAD_CHAPTER_DATA": {
+          const incomingBookId = payload?.bookId;
+          const incomingUid = payload?.chapterUid;
+          const currentBookId = currentBookRef.current?.bookId;
+          const currentUid = currentChapterUidRef.current;
+          if (viewRef.current !== "reader") {
+            console.log("[Weread] Ignore chapter data after leaving reader");
+            break;
+          }
+          if (incomingBookId && currentBookId && incomingBookId !== currentBookId) {
+            console.log(
+              "[Weread] Ignore stale chapter book:",
+              incomingBookId,
+              "current:",
+              currentBookId,
+            );
+            break;
+          }
+          if (
+            incomingUid != null &&
+            currentUid != null &&
+            String(incomingUid) !== String(currentUid)
+          ) {
+            console.log(
+              "[Weread] Ignore stale chapter uid:",
+              incomingUid,
+              "current:",
+              currentUid,
+            );
+            break;
+          }
           console.log(
             "[Weread] Chapter content received:",
             payload.format,
@@ -359,7 +391,6 @@ const App: React.FC = () => {
     bookId: string,
     idx: number,
     chapters: Chapter[],
-    silent = false,
   ) => {
     setLoading(true);
     setCurrentChapterIdx(idx);
@@ -372,7 +403,7 @@ const App: React.FC = () => {
 
     vscode.postMessage({
       command: "WEREAD_GET_CHAPTER",
-      payload: { bookId, chapterUid: chapter.chapterUid, silent },
+      payload: { bookId, chapterUid: chapter.chapterUid },
     });
 
     vscode.postMessage({
