@@ -1,0 +1,21 @@
+.github/copilot-instructions.md
+  s_47854fb36533ce::t_0525a7872cd7b7 11
+.versionrc
+  s_47854fb36533ce::t_ff1cd8b84c195f 4-31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "2412b0a2f22b6a782972d38205cbc1867d2b6d5b",
+  "prompts": {},
+  "sessions": {
+    "s_47854fb36533ce": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "d1938f3f-88de-44f7-b6f9-d2607cad0eab",
+        "model": "unknown"
+      },
+      "human_author": "AbnerSun <sunjj11@chinatelecom.cn>"
+    }
+  }
+}
