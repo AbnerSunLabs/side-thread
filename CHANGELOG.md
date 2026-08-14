@@ -1,7 +1,5 @@
 # 更新历史
 
-本仓库从 2026-08-06 起记录。此前历史已从 git 中移除。
-
 ## [17.10.0](https://github.com/AbnerSunLabs/side-thread/releases/tag/v17.10.0) (2026-08-14)
 
 ### ❤️ Code Refactoring | 代码重构
