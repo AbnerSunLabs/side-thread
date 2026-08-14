@@ -21,6 +21,7 @@ import {
   AppstoreOutlined,
 } from "@ant-design/icons";
 import { vscode } from "./utils/vscode";
+import { useReadSession } from "./hooks/useReadSession";
 import { useFontSizeStore } from "./store/fontSize";
 import "./style/App.less";
 
@@ -302,10 +303,6 @@ const App: React.FC = () => {
           }
           break;
         }
-        case "WEREAD_SAVE_PROGRESS_SUCCESS": {
-          message.success("进度已保存");
-          break;
-        }
         case "WEREAD_CHAPTER_DATA": {
           console.log(
             "[Weread] Chapter content received:",
@@ -544,6 +541,13 @@ const App: React.FC = () => {
 
     return injectedHtml;
   }, [chapterContent, underlines]);
+
+  useReadSession({
+    enabled: view === "reader" && !loading && !!chapterContent,
+    bookId: currentBook?.bookId,
+    chapterUid: catalog[currentChapterIdx]?.chapterUid,
+    format: chapterContent?.format,
+  });
 
   return (
     <div className={`weread-app ${view}`}>
