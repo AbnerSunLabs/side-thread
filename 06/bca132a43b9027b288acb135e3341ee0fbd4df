@@ -1,0 +1,22 @@
+weread/src/App.tsx
+  s_78d52a14f36c9d::t_dd985ab8aaef71 24
+  s_78d52a14f36c9d::t_24c53e12fc337e 545-551
+weread/src/hooks/useReadSession.ts
+  s_78d52a14f36c9d::t_aef2c7d8a2e9ef 1-49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "06bca132a43b9027b288acb135e3341ee0fbd4df",
+  "prompts": {},
+  "sessions": {
+    "s_78d52a14f36c9d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "14ad2651-987c-411d-ae22-141bf1f8b57d",
+        "model": "unknown"
+      },
+      "human_author": "AbnerSun <sunjj11@chinatelecom.cn>"
+    }
+  }
+}
