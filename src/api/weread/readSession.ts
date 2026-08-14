@@ -152,7 +152,17 @@ export function flushSession(
   // flush 是一次性收尾：不走 tickSession 的「满 60 报 60 留余数」周期逻辑，
   // 否则内部 tick 报出的 60s 会被丢弃，导致少报。这里把最后一段直接累计进
   // unreportedMs，再交给 takeReport 一次性 cap 到 60 上报。
-  const accumulated = session.paused ? session : accumulateUntil(session, now);
+  let accumulated = session;
+  if (!session.paused) {
+    const idleAt = session.lastActivityAt + READ_TIME_IDLE_MS;
+    // 与 tickSession 的 idle 分支保持一致：空闲时只累计到活动结束点，
+    // 不把 180s 挂机 grace period 及之后的时间算进去。
+    const until =
+      now >= idleAt
+        ? Math.max(session.lastTickAt, session.lastActivityAt)
+        : now;
+    accumulated = accumulateUntil(session, until);
+  }
   const reported = takeReport(accumulated);
   return {
     session: { ...reported.session, lastTickAt: now },
@@ -262,8 +272,10 @@ export class WereadReadReporter {
 
   private ensureTimer(): void {
     if (this.timer) return;
+    // 返回 handleTick 的 Promise：生产环境 setInterval 会忽略返回值，
+    // 但测试里可 await intervals[0]() 等待 tick 完整结束（含 finally 复位 ticking）。
     this.timer = this.setIntervalFn!(() => {
-      void this.handleTick();
+      return this.handleTick();
     }, READ_TIME_TICK_MS);
   }
 

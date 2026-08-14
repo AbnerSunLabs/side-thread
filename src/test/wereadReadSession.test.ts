@@ -98,6 +98,17 @@ describe("weread readSession", () => {
     assert.equal(flushed.session.unreportedMs, 0);
   });
 
+  it("flush of an idle-but-not-paused session does not count idle time", () => {
+    const started = sessionAt(1_000);
+    const active = markActivity(started, 1_000 + 5_000);
+    const flushed = flushSession(
+      active,
+      1_000 + 5_000 + READ_TIME_IDLE_MS + 60_000,
+    );
+    assert.equal(flushed.reportSeconds, 5);
+    assert.equal(flushed.session.unreportedMs, 0);
+  });
+
   it("resume continues from the resume timestamp", () => {
     const started = sessionAt(1_000);
     const paused = pauseSession(started, 1_000 + 10_000);
@@ -211,5 +222,93 @@ describe("WereadReadReporter", () => {
     });
     await reporter.start("b1", 12, "epub");
     assert.equal(reporter.hasSession(), false);
+  });
+
+  it("pause then resume continues without re-init", async () => {
+    let now = 1_000;
+    let initCount = 0;
+    const reports: number[] = [];
+    const reporter = new WereadReadReporter({
+      now: () => now,
+      init: async () => {
+        initCount += 1;
+        return { succ: 1, readerToken: "tok" };
+      },
+      report: async ({ rt }) => {
+        reports.push(rt);
+        return { succ: 1 };
+      },
+      setIntervalFn: () => 1 as unknown as ReturnType<typeof setInterval>,
+      clearIntervalFn: () => undefined,
+    });
+    await reporter.start("b1", 12, "epub");
+    now += 40_000;
+    await reporter.pause();
+    now += 100_000;
+    await reporter.resume();
+    await reporter.start("b1", 12, "epub");
+    assert.equal(initCount, 1);
+    now += 30_000;
+    await reporter.stop();
+    assert.deepEqual(reports, [60]);
+  });
+
+  it("report failure does not roll back and next tick reports new seconds", async () => {
+    let now = 1_000;
+    let failNext = true;
+    const reports: number[] = [];
+    const intervals: Array<() => void> = [];
+    const reporter = new WereadReadReporter({
+      now: () => now,
+      init: async () => ({ succ: 1, readerToken: "tok" }),
+      report: async ({ rt }) => {
+        if (failNext) {
+          failNext = false;
+          throw new Error("network");
+        }
+        reports.push(rt);
+        return { succ: 1 };
+      },
+      setIntervalFn: handler => {
+        intervals.push(handler);
+        return 1 as unknown as ReturnType<typeof setInterval>;
+      },
+      clearIntervalFn: () => undefined,
+    });
+    await reporter.start("b1", 12, "epub");
+    now += 75_000;
+    await intervals[0]();
+    assert.deepEqual(reports, []);
+    now += 45_000;
+    await intervals[0]();
+    assert.deepEqual(reports, [60]);
+  });
+
+  it("idle tick pauses session and subsequent stop does not over-report", async () => {
+    let now = 1_000;
+    const reports: number[] = [];
+    const intervals: Array<() => void> = [];
+    const reporter = new WereadReadReporter({
+      now: () => now,
+      init: async () => ({ succ: 1, readerToken: "tok" }),
+      report: async ({ rt }) => {
+        reports.push(rt);
+        return { succ: 1 };
+      },
+      setIntervalFn: handler => {
+        intervals.push(handler);
+        return 1 as unknown as ReturnType<typeof setInterval>;
+      },
+      clearIntervalFn: () => undefined,
+    });
+    await reporter.start("b1", 12, "epub");
+    now += 5_000;
+    await reporter.markActivity();
+    now = 6_000 + READ_TIME_IDLE_MS;
+    await intervals[0]();
+    assert.deepEqual(reports, [5]);
+    now += 60_000;
+    await reporter.stop();
+    assert.deepEqual(reports, [5]);
   });
 });
