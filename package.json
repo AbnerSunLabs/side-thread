@@ -3,7 +3,7 @@
 	"name": "touchfish",
 	"displayName": "TouchFish",
 	"description": "微信读书、小宇宙播客摸鱼插件",
-	"version": "17.9.1",
+	"version": "17.10.0",
 	"icon": "logo.png",
 	"engines": {
 		"vscode": "^1.80.0"

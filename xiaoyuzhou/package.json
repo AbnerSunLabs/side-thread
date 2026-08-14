@@ -1,7 +1,7 @@
 {
   "name": "xiaoyuzhou",
   "private": true,
-  "version": "0.0.1",
+  "version": "17.10.0",
   "type": "module",
   "scripts": {
     "dev": "vite --port 5178",

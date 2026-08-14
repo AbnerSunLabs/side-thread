@@ -1,11 +1,38 @@
-# 更新历史
+# 更新历史 
 
-## [Unreleased]
+
+## [17.10.0](https://github.com/ylw1997/touchFish/compare/v17.9.1...v17.10.0) (2026-08-14)
+
+
+### ❤️ Code Refactoring | 代码重构
+
+* 精简为微信读书与小宇宙双平台并修复划线截断 ([76add18](https://github.com/ylw1997/touchFish/commit/76add180c00107147e8966d8aaa889732681f9bb))
+
 
 ### ✨ Features | 新功能
 
-- 微信读书阅读时长同步到微信读书账号：同一章不翻页也会累计；约 3 分钟无操作视为挂机；切走侧栏不计时
-- 插件能力收口为微信读书与小宇宙双平台
+* 微信读书 Host 侧接入阅读时长会话 ([f7b1113](https://github.com/ylw1997/touchFish/commit/f7b11139df9e36c8d398aae261b2631b94333bf2))
+* 微信读书阅读器按真实阅读生命周期上报时长 ([06bca13](https://github.com/ylw1997/touchFish/commit/06bca132a43b9027b288acb135e3341ee0fbd4df))
+* 新增微信读书阅读时长上报会话 ([494b2fe](https://github.com/ylw1997/touchFish/commit/494b2fe5c48224c572e7b046a3dba1419342dbf3))
+* 新增微信读书阅读时长时钟纯函数 ([15d7b42](https://github.com/ylw1997/touchFish/commit/15d7b422db1058a3a24a4416f8a8f3610eb0d2b9))
+
+
+### 🐰 Bug Fixes | Bug 修复
+
+* 修复阅读时长会话竞态并区分空闲与侧栏隐藏 ([8d9d8f5](https://github.com/ylw1997/touchFish/commit/8d9d8f5c7a46224cf1e0e9345bd1549b30ab1f34))
+* 修正 flushSession 少报时长并加强空闲断言 ([bd43772](https://github.com/ylw1997/touchFish/commit/bd437721febadd2351adda360661ef8256a71877))
+* 修正 flushSession 空闲边界并补充 Reporter 状态机测试 ([c1748c9](https://github.com/ylw1997/touchFish/commit/c1748c97c544bc7187ff262265bb7a64087b03ee))
+
+
+### 📑 Documentation | 文档
+
+* 按双平台现役能力更新说明与更改日志 ([dc5a38b](https://github.com/ylw1997/touchFish/commit/dc5a38b328801b39e0dc5e73e5274467d0fd902b))
+* 补充微信读书阅读时长同步说明 ([0653c56](https://github.com/ylw1997/touchFish/commit/0653c561991c126a04eaa4c02712131cbe1ae74a))
+
+
+### 📝 Chores | 其他更新
+
+* 发版时同步 webview 包版本并明确 SemVer 约定 ([2412b0a](https://github.com/ylw1997/touchFish/commit/2412b0a2f22b6a782972d38205cbc1867d2b6d5b))
 
 ### [17.9.1](https://github.com/ylw1997/touchFish/compare/v17.9.0...v17.9.1) (2026-08-05)
 
