@@ -10,6 +10,7 @@ import {
   READ_TIME_IDLE_MS,
   resumeSession,
   tickSession,
+  WereadReadReporter,
 } from "../api/weread/readSession";
 
 function sessionAt(now: number) {
@@ -110,5 +111,105 @@ describe("weread readSession", () => {
     assert.equal(isSameChapter(started, "b1", 12), true);
     assert.equal(isSameChapter(started, "b1", 13), false);
     assert.equal(isSameChapter(null, "b1", 12), false);
+  });
+});
+
+describe("WereadReadReporter", () => {
+  it("inits once and reports 60s after 75s of active time", async () => {
+    let now = 1_000;
+    const reports: number[] = [];
+    const intervals: Array<() => void> = [];
+    const reporter = new WereadReadReporter({
+      now: () => now,
+      init: async () => ({ succ: 1, readerToken: "tok" }),
+      report: async ({ rt }) => {
+        reports.push(rt);
+        return { succ: 1 };
+      },
+      setIntervalFn: (handler) => {
+        intervals.push(handler);
+        return 1 as unknown as ReturnType<typeof setInterval>;
+      },
+      clearIntervalFn: () => undefined,
+    });
+
+    await reporter.start("b1", 12, "epub");
+    now += 75_000;
+    await intervals[0]();
+    assert.deepEqual(reports, [60]);
+  });
+
+  it("same chapter start does not init twice", async () => {
+    let initCount = 0;
+    const reporter = new WereadReadReporter({
+      now: () => 1,
+      init: async () => {
+        initCount += 1;
+        return { succ: 1, readerToken: "tok" };
+      },
+      report: async () => ({ succ: 1 }),
+      setIntervalFn: () => 1 as unknown as ReturnType<typeof setInterval>,
+      clearIntervalFn: () => undefined,
+    });
+    await reporter.start("b1", 12, "epub");
+    await reporter.start("b1", 12, "epub");
+    assert.equal(initCount, 1);
+  });
+
+  it("switching chapter flushes the previous session once then inits the new one", async () => {
+    let now = 1_000;
+    const reports: Array<{ chapterUid: number; rt: number }> = [];
+    const initChapters: number[] = [];
+    const reporter = new WereadReadReporter({
+      now: () => now,
+      init: async (_bookId, chapterUid) => {
+        initChapters.push(chapterUid);
+        return { succ: 1, readerToken: "tok" };
+      },
+      report: async ({ chapterUid, rt }) => {
+        reports.push({ chapterUid, rt });
+        return { succ: 1 };
+      },
+      setIntervalFn: () => 1 as unknown as ReturnType<typeof setInterval>,
+      clearIntervalFn: () => undefined,
+    });
+
+    await reporter.start("b1", 1, "epub");
+    now += 40_000;
+    await reporter.start("b1", 2, "epub");
+    assert.deepEqual(initChapters, [1, 2]);
+    assert.deepEqual(reports, [{ chapterUid: 1, rt: 40 }]);
+  });
+
+  it("stop after 40s reports 40s once", async () => {
+    let now = 1_000;
+    const reports: number[] = [];
+    const reporter = new WereadReadReporter({
+      now: () => now,
+      init: async () => ({ succ: 1, readerToken: "tok" }),
+      report: async ({ rt }) => {
+        reports.push(rt);
+        return { succ: 1 };
+      },
+      setIntervalFn: () => 1 as unknown as ReturnType<typeof setInterval>,
+      clearIntervalFn: () => undefined,
+    });
+    await reporter.start("b1", 12, "epub");
+    now += 40_000;
+    await reporter.stop();
+    assert.deepEqual(reports, [40]);
+    assert.equal(reporter.hasSession(), false);
+  });
+
+  it("init failure does not start a session", async () => {
+    const reporter = new WereadReadReporter({
+      now: () => 1,
+      init: async () => ({ succ: 0 }),
+      report: async () => ({ succ: 1 }),
+      setIntervalFn: () => 1 as unknown as ReturnType<typeof setInterval>,
+      clearIntervalFn: () => undefined,
+    });
+    await reporter.start("b1", 12, "epub");
+    assert.equal(reporter.hasSession(), false);
   });
 });

@@ -160,3 +160,144 @@ export function flushSession(
     becameIdle: false,
   };
 }
+
+export type ReadInitResult = { succ?: number; readerToken?: string };
+
+export type ReadReportParams = {
+  bookId: string;
+  chapterUid: number;
+  format: string;
+  readerToken: string;
+  rt: number;
+};
+
+export type WereadReadReporterDeps = {
+  init: (
+    bookId: string,
+    chapterUid: number,
+    format: string,
+  ) => Promise<ReadInitResult>;
+  report: (params: ReadReportParams) => Promise<{ succ?: number }>;
+  now?: () => number;
+  setIntervalFn?: (
+    handler: () => void,
+    ms: number,
+  ) => ReturnType<typeof setInterval>;
+  clearIntervalFn?: (id: ReturnType<typeof setInterval>) => void;
+};
+
+export class WereadReadReporter {
+  private session: ReadSession | null = null;
+  private timer: ReturnType<typeof setInterval> | null = null;
+  private ticking = false;
+  private readonly now: () => number;
+  private readonly setIntervalFn: WereadReadReporterDeps["setIntervalFn"];
+  private readonly clearIntervalFn: WereadReadReporterDeps["clearIntervalFn"];
+
+  constructor(private deps: WereadReadReporterDeps) {
+    this.now = deps.now ?? (() => Date.now());
+    this.setIntervalFn = deps.setIntervalFn ?? setInterval;
+    this.clearIntervalFn = deps.clearIntervalFn ?? clearInterval;
+  }
+
+  hasSession(): boolean {
+    return this.session !== null;
+  }
+
+  markActivity(): void {
+    if (!this.session) return;
+    this.session = markActivity(this.session, this.now());
+  }
+
+  resume(): void {
+    if (!this.session) return;
+    this.session = resumeSession(this.session, this.now());
+    this.ensureTimer();
+  }
+
+  async start(
+    bookId: string,
+    chapterUid: number,
+    format: string,
+  ): Promise<void> {
+    if (isSameChapter(this.session, bookId, chapterUid)) {
+      this.resume();
+      this.markActivity();
+      return;
+    }
+    await this.stop();
+    try {
+      const initRes = await this.deps.init(bookId, chapterUid, format);
+      if (initRes?.succ !== 1 || !initRes.readerToken) {
+        console.error("[Weread] 阅读会话初始化失败", initRes);
+        return;
+      }
+      this.session = createReadSession({
+        bookId,
+        chapterUid,
+        format,
+        readerToken: initRes.readerToken,
+        now: this.now(),
+      });
+      this.ensureTimer();
+    } catch (error) {
+      console.error("[Weread] 阅读会话初始化异常", error);
+    }
+  }
+
+  async pause(): Promise<void> {
+    if (!this.session || this.session.paused) return;
+    const result = pauseSession(this.session, this.now());
+    this.session = result.session;
+    await this.reportIfNeeded(result);
+  }
+
+  async stop(): Promise<void> {
+    this.clearTimer();
+    if (!this.session) return;
+    const result = flushSession(this.session, this.now());
+    this.session = null;
+    await this.reportIfNeeded(result);
+  }
+
+  private ensureTimer(): void {
+    if (this.timer) return;
+    this.timer = this.setIntervalFn!(() => {
+      void this.handleTick();
+    }, READ_TIME_TICK_MS);
+  }
+
+  private clearTimer(): void {
+    if (!this.timer) return;
+    this.clearIntervalFn!(this.timer);
+    this.timer = null;
+  }
+
+  private async handleTick(): Promise<void> {
+    if (!this.session || this.ticking) return;
+    this.ticking = true;
+    try {
+      const result = tickSession(this.session, this.now());
+      this.session = result.session;
+      await this.reportIfNeeded(result);
+    } finally {
+      this.ticking = false;
+    }
+  }
+
+  private async reportIfNeeded(result: SessionTickResult): Promise<void> {
+    if (!result.reportSeconds) return;
+    const snapshot = result.session;
+    try {
+      await this.deps.report({
+        bookId: snapshot.bookId,
+        chapterUid: snapshot.chapterUid,
+        format: snapshot.format,
+        readerToken: snapshot.readerToken,
+        rt: result.reportSeconds,
+      });
+    } catch (error) {
+      console.error("[Weread] 阅读时长上报失败", error);
+    }
+  }
+}
