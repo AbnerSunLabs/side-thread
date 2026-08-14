@@ -1,0 +1,29 @@
+docs/weread-reading-time.md
+  h_245285a78fca97 15,19-34
+  s_47854fb36533ce::t_3f8b29cbecba18 35
+README.md
+  h_245285a78fca97 26
+CHANGELOG.md
+  h_245285a78fca97 18,25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "0563d3afcac43e7eeb629e08aff1ef7025d4fa9a",
+  "prompts": {},
+  "humans": {
+    "h_245285a78fca97": {
+      "author": "AbnerSun <sunyujiejohn@sina.com>"
+    }
+  },
+  "sessions": {
+    "s_47854fb36533ce": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "d1938f3f-88de-44f7-b6f9-d2607cad0eab",
+        "model": "unknown"
+      },
+      "human_author": "AbnerSun <sunyujiejohn@sina.com>"
+    }
+  }
+}
