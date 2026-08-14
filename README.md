@@ -4,7 +4,7 @@
 
 # TouchFish
 
-**一款专为打工人设计的 VScode、Cursor、Trae、CodeBuddy、Qorder、Antigravity 摸鱼神器，让你在编码的同时，尽享冲浪的乐趣。**
+**一款专为打工人设计的 VS Code / Cursor 摸鱼插件：在编辑器里读微信读书、听小宇宙播客。**
 
 [![VS Code Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/ylw.touchfish?style=for-the-badge&logo=visualstudiocode)](https://marketplace.visualstudio.com/items?itemName=ylw.touchfish)
 [![Installs](https://img.shields.io/visual-studio-marketplace/i/ylw.touchfish?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=ylw.touchfish)
@@ -23,127 +23,58 @@ https://open-vsx.org/extension/ylw/touchfish
 
 ## ✨ 核心功能
 
-- **多平台聚合**: 无需离开编辑器，即可沉浸式浏览来自 **IT 之家、Chiphell、V2EX、虎扑、NGA、Linux.do** 等多个热门社区的资讯。
-- **X (Twitter) 集成**: 在编辑器里刷推！支持 **首页时间线、搜索推文、查看推文详情、浏览评论、用户主页、关注/取关、点赞/转发、发推文、上传图片**，享受完整的 X 浏览与互动体验。
-- **全功能微博**: 不仅仅是看！你可以 **刷微博、看评论、点赞、转发、发微博、关注/取关用户**，享受近乎完整的桌面端微博体验。
-- **深度集成知乎**: 在代码的海洋里，随时潜入知乎探索答案。支持 **查看热榜、浏览推荐、查看问题和回答详情、展开/折叠评论、点赞/反对、关注问题** 等深度互动。
-- **小红书浏览**: 完整的小红书体验，支持 **首页推荐流、搜索笔记、查看详情、浏览评论、用户主页、关注/取关用户**，在 编辑器 内完成完整的小红书浏览闭环。
-- **B 站视频**: 在 编辑器 里刷 B 站！支持 **首页推荐、动态更新、待看列表、收藏夹浏览、视频搜索、用户主页、关注/取关、视频内联播放、加入播放列表、加入待看**，让你在代码间隙享受视频内容。
-- **QQ音乐**: 在 编辑器 中畅享音乐！支持 **歌单推荐、排行榜、搜索歌曲、播放音乐、查看歌手专辑、歌词显示、收藏歌曲**，状态栏实时显示歌词，代码摸鱼两不误。
-- **网易云音乐**: 极致的音乐播放体验！支持 **推荐歌单、每日歌曲推荐、排行榜、搜索歌曲、内联播放、查看歌手详情（带头像/歌曲总数）、歌词同步及播放列表管理**，状态栏支持实时滚动歌词显示。
-- **小宇宙播客**: 订阅你喜爱的播客！支持 **发现页流、个人订阅列表、收件箱更新、节目/单集详情浏览、订阅/取消订阅、播放进度同步及 Shownotes 显示**，让你在敲代码时也能听见世界的声音。
-- **抖音**: 沉浸式全屏短视频体验！支持 **个性推荐流、关注博主列表、喜欢列表**。拥有丝滑的原生手势感滑动对齐、智能静音与自动播放、暗黑磨砂玻璃质感的评论区抽屉、无缝转场封面防黑屏等体验。
-- **微信读书集成**: 沉浸式阅读体验！支持 **书架同步、阅读进度云同步、阅读时长同步到微信读书账号、章节目录导航、划线笔记查看**，支持自定义字体大小，在 编辑器 里静心研读。
-- **无缝主题切换**: 插件界面能够 **自动侦测并适配** 你当前的 编辑器 主题。无论你切换到任何亮色或暗色主题，视图都会即时响应，实现真正的沉浸式体验，摸鱼不留痕迹。
-- **丰富交互体验**: 支持 **图片懒加载、视频播放、长文展开、加载动画、列表无限滚动、瀑布流布局** 等特性，提供流畅、现代的浏览体验。
-- **高度可配置**: 从新闻源到栏目分类，再到内容展示方式，多种参数均可自定义，打造最适合你的摸鱼环境。
+- **微信读书**: 书架同步、阅读进度云同步、**阅读时长同步到微信读书账号**、章节目录、划线与热门想法、自定义字体。同一章不翻页也会记时长；约 3 分钟无滚动/点击视为挂机。机制说明见 [docs/weread-reading-time.md](docs/weread-reading-time.md)。
+- **小宇宙播客**: 发现页、订阅列表、收件箱、节目/单集详情、订阅/取消订阅、播放进度同步、Shownotes、状态栏字幕。
+- **主题适配**: 界面跟随编辑器亮色/暗色主题。
+- **开关**: `touchfish.enableWeread` / `touchfish.enableXiaoyuzhou` 可分别关闭模块。
 
-## 💡 功能展示（视频）
-
-https://github.com/user-attachments/assets/9e7ca4b3-e428-4ebf-abed-bbb6bb04530f
-
-## 🚀 功能展示（截图）
-
-#### 💬 刷知乎
-
-![ScreenShot_2025-11-05_150650_643](https://github.com/user-attachments/assets/6d34e1ab-b11e-4560-8d29-c95734e7080f)
-
-### 💬 刷 B 站
-
-![ScreenShot_2025-11-05_150629_155](https://github.com/user-attachments/assets/57c56e8a-d287-44c2-bdd5-8b68b969c112)
-
-#### 💬 刷微博
-
-![ScreenShot_2025-11-05_150629_155](https://github.com/user-attachments/assets/1df12cd7-013f-4782-8265-de0c25d21c1b)
-
-#### 💬 刷小红书
-
-![ScreenShot_2025-11-05_150705_107](https://github.com/user-attachments/assets/afef14cf-e641-482a-87be-baf61ff33b2f)
-
-#### 🎵 听 QQ音乐
-
-![qqmusic](https://github.com/user-attachments/assets/719115d6-7282-449c-82a5-3bfa144b8f0c)
+## 🚀 功能展示
 
 #### 🎙️ 小宇宙播客
 
 ![xiaoyuzhou](https://github.com/user-attachments/assets/2a13d8e5-0b5d-4179-97cd-4fb614743187)
 
-#### 🐦 刷 X (Twitter)
-
-![x](https://github.com/user-attachments/assets/11c009b6-b039-4eb6-8aff-a4b3dbf26491)
-
 ### 📗 微信读书
 
 ![weread](https://github.com/user-attachments/assets/9146d4e5-e1e1-4372-a7de-20c6952c3bff)
 
-### 网易云音乐
-
-![网易云音乐](https://github.com/user-attachments/assets/e19c4cc8-eebd-47a1-b0f2-9d13a9d39f65)
-
-### 抖音
-
-![douyin](https://github.com/user-attachments/assets/cdfca430-029b-481c-a8ab-4ddd6ed6bebf)
-
-### 📰 NGA,LINUXDO,V2EX,IT之家,CHIPHELL,虎扑
-
-![ScreenShot_2025-11-05_150613_386](https://github.com/user-attachments/assets/533fbebe-2f5c-468c-a3d1-c588c86664ec)
-
-### 🎮 VSCODE 暗色主题
+### 🎮 暗色主题
 
 ![主题](https://oss.qmsznj.com/prod/2025/08/13/800c066c-bce9-4041-a6d0-fbb1bf459855_20250813173043A282.png)
 
 ## 🛠️ 安装
 
-1.  打开 **编辑器**。
-2.  进入 **扩展** 视图 (`Ctrl+Shift+X`)。
-3.  搜索 `TouchFish`。
-4.  点击 **安装**。
+1. 打开 **编辑器**。
+2. 进入 **扩展** 视图 (`Ctrl+Shift+X`)。
+3. 搜索 `TouchFish`。
+4. 点击 **安装**。
 
-或者，[直接访问 编辑器 Marketplace](https://marketplace.visualstudio.com/items?itemName=ylw.touchfish)。
+或者，[直接访问 Marketplace](https://marketplace.visualstudio.com/items?itemName=ylw.touchfish)。
 
 ## ⚙️ 配置与使用
 
-### 快捷配置 Cookie / Token
+### 快捷配置
 
-为了获得完整的个人化体验（如刷微博、操作知乎），你需要设置相关平台的 Cookie 或 Token。本插件提供了便捷的命令来设置：
-
-1.  在 `TouchFish` 视图中，找到对应的平台（如微博、知乎、NGA）。
-2.  点击视图右上角的 **齿轮图标 (⚙️)**。
-3.  在弹出的输入框中，粘贴你的 Cookie 或 Token。
+1. 打开 **微信读书** 或 **小宇宙** 视图。
+2. 点击视图右上角的 **齿轮图标 (⚙️)**。
+3. 按提示粘贴微信读书 Cookie，或完成小宇宙登录。
 
 ### 手动配置
 
-你也可以在 编辑器 的设置中 (`Ctrl+,`) 搜索 `touchfish` 来找到所有可配置的选项，例如：
+在设置中 (`Ctrl+,`) 搜索 `touchfish`：
 
-- `touchfish.weiboCookie`: 你的微博 Cookie。
-- `touchfish.zhihuCookie`: 你的知乎 Cookie。
-- `touchfish.ngaCookie`: 你的 NGA Cookie。
-- `touchfish.xhsCookie`: 你的小红书 Cookie (用于首页推荐加密接口)。
-- `touchfish.bilibiliCookie`: 你的 B 站 Cookie (用于推荐、动态、待看、收藏夹、视频播放等功能)。
-- `touchfish.qqmusicCookie`: 你的 QQ音乐 Cookie (用于推荐、排行榜、收藏等功能)。
-- `touchfish.neteaseCredential`: 你的网易云音乐登录 Cookie 凭据 (可在侧边栏点击齿轮直接设置)。
-- `touchfish.xiaoyuzhouAccessToken`: 你的小宇宙访问令牌。
-- `touchfish.xiaoyuzhouRefreshToken`: 你的小宇宙刷新令牌。
-- `touchfish.linuxDoCookie`: 你的 Linux.do Cookie (访问 RSS 源需要)。
-- `touchfish.xCookie`: 你的 X (Twitter) Cookie（ct0 会自动提取为 csrf-token，无需单独配置）。
-- `touchfish.wereadCookie`: 你的微信读书 Cookie。
-- `touchfish.douyinCookie`: 你的抖音 Cookie。
-- `touchfish.showImg`: 是否显示图片（目前主要支持微博）。
-- `touchfish.showQQMusicStatusBar`: 是否在状态栏显示 QQ音乐播放信息（也支持小宇宙、网易云）。
-- `touchfish.qqmusicShowLyric`: 状态栏显示歌词（关闭则显示歌名）。
-- `touchfish.neteaseShowStatusBar`: 是否在状态栏显示网易云音乐播放信息。
-- `touchfish.neteaseStatusBarShowLyric`: 网易云音乐状态栏显示歌词（关闭则显示歌名）。
-- 以及各个新闻源的默认标签页配置（支持 V2EX、虎扑、NGA、Linux.do 等）。
+- `touchfish.wereadCookie`: 微信读书 Cookie（书架、进度、阅读时长同步都依赖它）。
+- `touchfish.xiaoyuzhouAccessToken` / `touchfish.xiaoyuzhouRefreshToken`: 小宇宙令牌（也可短信登录，不必手填）。
+- `touchfish.xiaoyuzhouStatusBarShowLyric`: 状态栏显示播客字幕（关闭则显示标题）。
+- `touchfish.enableWeread` / `touchfish.enableXiaoyuzhou`: 是否启用对应模块。
+- `touchfish.fontSize`: 全局字体大小。
+- `touchfish.showImg`: 是否显示图片。
 
 ## ⚠️ 注意事项
 
-- **网络环境**: 浏览 **V2EX** 节点需要科学上网。
-- **Cookie 配置**:
-  - **小红书、微博、知乎、NGA、Linux.do、小宇宙、X** 的大部分高级功能需要登录凭证（Cookie 或 Token）。
-  - 小宇宙支持手机短信验证码登录，无需手动配置 Cookie。
-  - **X (Twitter)** 需要科学上网，并需配置 Cookie 和 csrf-token 才能使用。
-- **标签页切换**: 支持 **Linux.do**（最新/热门/排行榜）、**V2EX**（全部/技术/创意等）、**虎扑**（步行街热帖/主干道等）、**NGA**（网事杂谈/晴风村等）多个平台的栏目切换。
-- **视频有画面但没有声音**：编辑器内置的 Electron/Chromium 精简版可能不含视频所需的 AAC 等专利音频解码器。替换插件本身或调节播放器音量不能解决该问题，需要给**实际运行 TouchFish 的编辑器**安装与其 Electron 版本完全一致的 FFmpeg。
+- **微信读书 Cookie**: 未配置时仍可打开阅读器，但进度和时长不会同步到 APP。
+- **小宇宙**: 支持手机短信验证码登录，无需手动配 Cookie。
+- **播客没有声音**：编辑器内置的 Electron 可能缺少 AAC 等音频解码器。替换插件或调音量无效，需要给**实际运行 TouchFish 的编辑器**安装与其 Electron 版本一致的 FFmpeg。
 
   > [!WARNING]
   > 操作前请完全退出编辑器（包括后台进程）。脚本会修改编辑器安装目录；macOS 还会用 ad-hoc 签名替换应用的官方签名。请确认你理解风险后再执行。重新安装编辑器可以恢复官方文件和签名。
@@ -181,7 +112,6 @@ https://github.com/user-attachments/assets/9e7ca4b3-e428-4ebf-abed-bbb6bb04530f
   脚本会自动读取编辑器和 Electron 版本、下载对应架构的官方 Electron 构建、备份原媒体库、替换并比较 SHA-256；macOS 会在替换后重新签名并验证应用。看到 `Replacement and hash verification succeeded.` 才表示替换完成。备份保存在用户目录下的 `.touchfish/ffmpeg-backups`。
 
   **替换后仍然没有声音**
-
   1. 确认脚本打印的 `Installation` 就是当前打开的编辑器。终端中的 `code` 命令可能指向 Cursor 或其他编辑器，不能据此判断。
   2. 完全退出并重新启动编辑器，仅执行“重新加载窗口”不够。
   3. 再运行一次 `--check`；如果两个哈希不同，说明替换没有成功或已失效。
@@ -196,5 +126,6 @@ https://github.com/user-attachments/assets/9e7ca4b3-e428-4ebf-abed-bbb6bb04530f
 
 - **问题反馈**: 如果遇到任何 Bug 或有功能建议，欢迎在 [GitHub Issues](https://github.com/ylw1997/touchFish/issues) 中提出。
 
-- ## 友链
+## 友链
+
 - [https://linux.do/](https://linux.do/u/ylw/summary)
