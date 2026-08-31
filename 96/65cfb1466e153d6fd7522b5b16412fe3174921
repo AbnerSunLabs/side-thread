@@ -1,0 +1,28 @@
+src/Providers/wereadProvider.ts
+  s_9c3adf67505bb0::t_b3796f27ac74bf 329
+weread/src/App.tsx
+  s_9c3adf67505bb0::t_0974ee6fae2101 431-438,440,443,447-468,470-473,477-478
+  s_9c3adf67505bb0::t_8db96041e3d422 253-255
+  s_9c3adf67505bb0::t_f2bac1887d94a8 228-233
+  s_9c3adf67505bb0::t_ece1124a59fdc1 624
+  s_9c3adf67505bb0::t_7c292b1953994c 984
+  s_9c3adf67505bb0::t_30c5561223fbb4 189
+  s_9c3adf67505bb0::t_db061b05503376 582
+  s_9c3adf67505bb0::t_500aef3f2bfb03 252
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "9665cfb1466e153d6fd7522b5b16412fe3174921",
+  "prompts": {},
+  "sessions": {
+    "s_9c3adf67505bb0": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "c83822d1-d19f-4e04-9d2b-7a3161d67fb0",
+        "model": "cursor-grok-4.6-high"
+      },
+      "human_author": "AbnerSun <sunyujiejohn@sina.com>"
+    }
+  }
+}
