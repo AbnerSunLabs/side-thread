@@ -17,9 +17,17 @@ import {
   MinusOutlined,
   VerticalAlignTopOutlined,
   UnorderedListOutlined,
+  LikeFilled,
   LikeOutlined,
   AppstoreOutlined,
 } from "@ant-design/icons";
+import {
+  applyLikeToggle,
+  parseThoughtLikeCount,
+  parseThoughtLiked,
+  ThoughtVisibility,
+} from "core-weread/wereadThoughts";
+import { ThoughtComposer } from "./components/ThoughtComposer";
 import { vscode } from "./utils/vscode";
 import { useReadSession } from "./hooks/useReadSession";
 import { useFontSizeStore } from "./store/fontSize";
@@ -56,12 +64,46 @@ interface Thought {
   range?: string;
   chapterUid?: number;
   likeCount?: number;
+  liked: boolean;
 }
 
 interface Underline {
   range: string;
   count: number;
   type: number;
+}
+
+function thoughtFromAddResult(
+  payload: unknown,
+  fallback: { content: string; abstract: string },
+): Thought {
+  const row = (payload ?? {}) as {
+    review?: {
+      reviewId?: string;
+      abstract?: string;
+      content?: string;
+      author?: { name?: string; avatar?: string };
+      review?: {
+        reviewId?: string;
+        abstract?: string;
+        content?: string;
+        author?: { name?: string; avatar?: string };
+      };
+    };
+  };
+  const review = row.review?.review ?? row.review ?? {};
+  const author = review.author ?? {};
+  return {
+    reviewId: review.reviewId ?? "",
+    abstract: review.abstract ?? fallback.abstract,
+    content: review.content || fallback.content,
+    user: {
+      name: author.name ?? "",
+      avatar: author.avatar ?? "",
+    },
+    liked: false,
+    likeCount: 0,
+  };
 }
 
 function parseChapterIdx(value: unknown): number | undefined {
@@ -141,6 +183,10 @@ const App: React.FC = () => {
   const [bestThoughts, setBestThoughts] = useState<Thought[]>([]);
   const [bestThoughtsVisible, setBestThoughtsVisible] = useState(false);
   const [bestThoughtsLoading, setBestThoughtsLoading] = useState(false);
+  const [likingId, setLikingId] = useState<string | null>(null);
+  const [thoughtSubmitting, setThoughtSubmitting] = useState(false);
+  const [currentRange, setCurrentRange] = useState("");
+  const [underlineAbstract, setUnderlineAbstract] = useState("");
   const [popoverPos, setPopoverPos] = useState<{
     top: number;
     left: number;
@@ -173,6 +219,14 @@ const App: React.FC = () => {
   const pendingUidRef = useRef<number | null>(null);
   const hasReceivedProgressRef = useRef<boolean>(false);
   const viewRef = useRef<"shelf" | "reader">(view);
+  const likeRollbackRef = useRef<{
+    reviewId: string;
+    previous: { likeCount: number; liked: boolean };
+  } | null>(null);
+  const thoughtSubmittingRef = useRef(false);
+  const pendingAddRef = useRef<{ content: string; abstract: string } | null>(
+    null,
+  );
 
   useEffect(() => {
     catalogRef.current = catalog;
@@ -235,7 +289,8 @@ const App: React.FC = () => {
                 name: pr.review.author.name,
                 avatar: pr.review.author.avatar,
               },
-              likeCount: pr.likesCount || 0,
+              liked: parseThoughtLiked(pr),
+              likeCount: parseThoughtLikeCount(pr),
             })),
           );
           setBestThoughts(formatted);
@@ -360,10 +415,49 @@ const App: React.FC = () => {
           if (contentEl) contentEl.scrollTop = 0;
           break;
         }
-        case "WEREAD_ERROR":
+        case "WEREAD_LIKE_THOUGHT_RESULT":
+          setLikingId(null);
+          likeRollbackRef.current = null;
+          break;
+        case "WEREAD_ADD_THOUGHT_RESULT": {
+          const fallback = pendingAddRef.current ?? {
+            content: "",
+            abstract: "",
+          };
+          setBestThoughts(list => [
+            thoughtFromAddResult(payload, fallback),
+            ...list,
+          ]);
+          thoughtSubmittingRef.current = false;
+          setThoughtSubmitting(false);
+          pendingAddRef.current = null;
+          break;
+        }
+        case "WEREAD_ERROR": {
+          const rollback = likeRollbackRef.current;
+          if (rollback) {
+            setBestThoughts(list =>
+              list.map(t =>
+                t.reviewId === rollback.reviewId
+                  ? {
+                      ...t,
+                      likeCount: rollback.previous.likeCount,
+                      liked: rollback.previous.liked,
+                    }
+                  : t,
+              ),
+            );
+            likeRollbackRef.current = null;
+            setLikingId(null);
+          }
+          if (thoughtSubmittingRef.current) {
+            thoughtSubmittingRef.current = false;
+            setThoughtSubmitting(false);
+          }
           message.error(payload.message);
           setLoading(false);
           break;
+        }
       }
     };
 
@@ -456,8 +550,14 @@ const App: React.FC = () => {
       setBestThoughtsLoading(true);
       setBestThoughtsVisible(true);
       setBestThoughts([]);
+      setLikingId(null);
+      likeRollbackRef.current = null;
+      thoughtSubmittingRef.current = false;
+      setThoughtSubmitting(false);
 
-      const range = underlineEl.getAttribute("data-range");
+      const range = underlineEl.getAttribute("data-range") || "";
+      setCurrentRange(range);
+      setUnderlineAbstract(underlineEl.textContent || "");
       if (range && currentBook && currentChapterIdx !== -1) {
         vscode.postMessage({
           command: "WEREAD_GET_BEST_THOUGHTS",
@@ -470,6 +570,49 @@ const App: React.FC = () => {
       }
       return;
     }
+  };
+
+  const handleLikeThought = (thought: Thought) => {
+    if (likingId) return;
+    const previous = {
+      likeCount: thought.likeCount ?? 0,
+      liked: thought.liked,
+    };
+    likeRollbackRef.current = { reviewId: thought.reviewId, previous };
+    const next = applyLikeToggle(previous.likeCount, previous.liked, !thought.liked);
+    setBestThoughts(list =>
+      list.map(item =>
+        item.reviewId === thought.reviewId ? { ...item, ...next } : item,
+      ),
+    );
+    setLikingId(thought.reviewId);
+    vscode.postMessage({
+      command: "WEREAD_LIKE_THOUGHT",
+      payload: { reviewId: thought.reviewId, isLike: !thought.liked },
+    });
+  };
+
+  const handleSubmitThought = (
+    content: string,
+    visibility: ThoughtVisibility,
+  ) => {
+    if (!currentBook || !catalog[currentChapterIdx] || !currentRange) return;
+    const abstract = bestThoughts[0]?.abstract || underlineAbstract;
+    pendingAddRef.current = { content, abstract };
+    thoughtSubmittingRef.current = true;
+    setThoughtSubmitting(true);
+    vscode.postMessage({
+      command: "WEREAD_ADD_THOUGHT",
+      payload: {
+        bookId: currentBook.bookId,
+        chapterUid: catalog[currentChapterIdx].chapterUid,
+        chapterIdx: parseChapterIdx(catalog[currentChapterIdx].chapterIdx),
+        range: currentRange,
+        abstract,
+        content,
+        visibility,
+      },
+    });
   };
 
   const handleContentMouseOver = (e: React.MouseEvent) => {
@@ -721,76 +864,105 @@ const App: React.FC = () => {
             style={{
               maxWidth: "300px",
               minWidth: "150px",
-              maxHeight: "400px",
-              overflowY: "auto",
             }}
           >
             {bestThoughtsLoading ? (
               <div style={{ padding: "20px", textAlign: "center" }}>
                 <Spin size="small" />
               </div>
-            ) : bestThoughts.length > 0 ? (
-              bestThoughts.map((thought) => (
+            ) : (
+              <>
                 <div
-                  key={thought.reviewId}
                   style={{
-                    marginBottom: "12px",
-                    padding: "8px",
-                    borderBottom: "1px solid var(--vscode-chat-requestBorder)",
+                    maxHeight: "400px",
+                    overflowY: "auto",
                   }}
                 >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      marginBottom: "8px",
-                    }}
-                  >
-                    <img
-                      src={thought.user.avatar}
-                      style={{
-                        width: "20px",
-                        height: "20px",
-                        borderRadius: "50%",
-                      }}
+                  {bestThoughts.length > 0 ? (
+                    bestThoughts.map(thought => (
+                      <div
+                        key={thought.reviewId}
+                        style={{
+                          marginBottom: "12px",
+                          padding: "8px",
+                          borderBottom:
+                            "1px solid var(--vscode-chat-requestBorder)",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            marginBottom: "8px",
+                          }}
+                        >
+                          <img
+                            src={thought.user.avatar}
+                            style={{
+                              width: "20px",
+                              height: "20px",
+                              borderRadius: "50%",
+                            }}
+                          />
+                          <span
+                            style={{
+                              fontSize: "calc(var(--app-font-size) - 1px)",
+                              fontWeight: 600,
+                            }}
+                          >
+                            {thought.user.name}
+                          </span>
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "calc(var(--app-font-size) - 1px)",
+                            color: "var(--vscode-editor-foreground)",
+                            marginBottom: "4px",
+                          }}
+                        >
+                          {thought.content}
+                        </div>
+                        <button
+                          type="button"
+                          disabled={likingId === thought.reviewId}
+                          onClick={() => handleLikeThought(thought)}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            color: thought.liked
+                              ? "var(--vscode-textLink-foreground, #1890ff)"
+                              : "var(--vscode-descriptionForeground)",
+                            fontSize: "11px",
+                            cursor:
+                              likingId === thought.reviewId
+                                ? "not-allowed"
+                                : "pointer",
+                            opacity: likingId === thought.reviewId ? 0.5 : 1,
+                            background: "none",
+                            border: "none",
+                            padding: 0,
+                          }}
+                        >
+                          {thought.liked ? <LikeFilled /> : <LikeOutlined />}{" "}
+                          {thought.likeCount}
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <Empty
+                      description="暂无热门想法"
+                      image={Empty.PRESENTED_IMAGE_SIMPLE}
                     />
-                    <span
-                      style={{
-                        fontSize: "calc(var(--app-font-size) - 1px)",
-                        fontWeight: 600,
-                      }}
-                    >
-                      {thought.user.name}
-                    </span>
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "calc(var(--app-font-size) - 1px)",
-                      color: "var(--vscode-editor-foreground)",
-                      marginBottom: "4px",
-                    }}
-                  >
-                    {thought.content}
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                      color: "var(--vscode-descriptionForeground)",
-                      fontSize: "11px",
-                    }}
-                  >
-                    <LikeOutlined /> {thought.likeCount}
-                  </div>
+                  )}
                 </div>
-              ))
-            ) : (
-              <Empty
-                description="暂无热门想法"
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-              />
+                <ThoughtComposer
+                  key={currentRange}
+                  submitting={thoughtSubmitting}
+                  onSubmit={handleSubmitThought}
+                />
+              </>
             )}
           </div>
         }

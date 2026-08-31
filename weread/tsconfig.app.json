@@ -16,7 +16,11 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+    "baseUrl": ".",
+    "paths": {
+      "core-weread/*": ["../src/core/*"]
+    }
   },
-  "include": ["src"]
+  "include": ["src", "../src/core/wereadThoughts.ts", "../src/core/wereadHtmlRange.ts"]
 }
