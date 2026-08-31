@@ -1,0 +1,51 @@
+src/Providers/wereadProvider.ts
+  s_9895797199ede4::t_3d8d815a74b3d6 22
+  s_9895797199ede4::t_03825823e2cc86 335
+  s_9895797199ede4::t_4fcfa2cb2746a5 269,276-279
+src/test/wereadThoughts.test.ts
+  s_9895797199ede4::t_c6e6c974fa8731 9,12
+  s_9895797199ede4::t_0a90519126f3fe 78-86
+docs/prd/weread-thoughts-like-comment.md
+  s_9895797199ede4::t_25b5654482ecd6 35
+  s_9895797199ede4::t_0adcf5d0141f2b 51
+src/test/wereadHtmlRange.test.ts
+  s_9895797199ede4::t_872915b53d3007 5
+  s_9895797199ede4::t_d3b752e1856021 50-54
+  s_9895797199ede4::t_4ae52caa41626d 61,63-67,69-71,76-77,80-116
+  s_9895797199ede4::t_f9ad68c003cdbf 117
+src/core/wereadHtmlRange.ts
+  s_9895797199ede4::t_520169a8ebe423 77-99,210-211,228,233,236-237
+  s_9895797199ede4::t_2987884c071e57 120-208,214-227,229
+weread/src/App.tsx
+  s_9895797199ede4::t_29049062fdb5e8 158-202
+  s_9895797199ede4::t_3e08075ed03c84 771,773-774,780,794
+  s_9895797199ede4::t_456a55ec04d688 531,537-539
+  s_9895797199ede4::t_23eed1a1c9f355 318-319
+  s_9895797199ede4::t_ac172121e23c92 809
+  s_9895797199ede4::t_3fee4e56cba030 936-939
+  s_9895797199ede4::t_0c1d39bd24ab7a 332
+  s_9895797199ede4::t_1c55abc73b22f1 746-747
+  s_9895797199ede4::t_7ad92415161f49 26,29,33,36
+  s_9895797199ede4::t_9fbcaf40ec1419 584,602-614
+  s_9895797199ede4::t_30656234f96fa0 824,830,836-837,843,857
+src/core/wereadThoughts.ts
+  s_9895797199ede4::t_c4c1041051782a 72,76-81,84
+  s_9895797199ede4::t_1d7778e6c16242 73-75,82-83
+  s_9895797199ede4::t_ca60a16072a427 85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "f35cf1570a89d8a9056d85298841a90decebf4c3",
+  "prompts": {},
+  "sessions": {
+    "s_9895797199ede4": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "cab996d6-c804-4876-82bf-ccda2806b416",
+        "model": "cursor-grok-4.6-high"
+      },
+      "human_author": "AbnerSun <sunyujiejohn@sina.com>"
+    }
+  }
+}
