@@ -1,0 +1,42 @@
+weread/tsconfig.app.json
+  s_9c3adf67505bb0::t_162f2d0e7e47d8 19-23,25
+weread/src/components/ThoughtComposer.tsx
+  s_9c3adf67505bb0::t_dc50a473c56aec 1-61
+weread/src/App.tsx
+  s_9c3adf67505bb0::t_756a328bb2b623 418-456,460
+  s_9c3adf67505bb0::t_c4aa4e7df00392 67
+  s_9c3adf67505bb0::t_43c3cff06685a1 20,24-30
+  s_9c3adf67505bb0::t_a1cff8e7a9dcb7 76-108
+  s_9c3adf67505bb0::t_922e0254a633ad 186-189
+  s_9c3adf67505bb0::t_222a8b23c5a9a7 222-229
+  s_9c3adf67505bb0::t_56507607a1b097 553-560,575-616
+  s_9c3adf67505bb0::t_77dfbb75151aee 873-874,877-878,881-956,958,960-965
+  s_9c3adf67505bb0::t_ad1fad309ad51a 292-293
+  s_3be32ed356c6cf::t_5e5695c54b9450 617
+weread/vite.config.ts
+  s_9c3adf67505bb0::t_f0caf8c168bba6 1-2,6-7,10-14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "f43a8b3ef72a8412b8ab07ab76aa69e872dce9d8",
+  "prompts": {},
+  "sessions": {
+    "s_3be32ed356c6cf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c7e5ce2a-0ae4-4936-b82c-3e904cebf02f",
+        "model": "deepseek-v4-flash-vision"
+      },
+      "human_author": "AbnerSun <sunyujiejohn@sina.com>"
+    },
+    "s_9c3adf67505bb0": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "c83822d1-d19f-4e04-9d2b-7a3161d67fb0",
+        "model": "cursor-grok-4.6-high"
+      },
+      "human_author": "AbnerSun <sunyujiejohn@sina.com>"
+    }
+  }
+}
