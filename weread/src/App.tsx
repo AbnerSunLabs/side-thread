@@ -27,6 +27,11 @@ import {
   parseThoughtLiked,
   ThoughtVisibility,
 } from "core-weread/wereadThoughts";
+import {
+  canUseThoughtRange,
+  htmlRangeFromTextOffsets,
+  htmlSlicePlainText,
+} from "core-weread/wereadHtmlRange";
 import { ThoughtComposer } from "./components/ThoughtComposer";
 import { vscode } from "./utils/vscode";
 import { useReadSession } from "./hooks/useReadSession";
@@ -117,6 +122,41 @@ function parseChapterIdx(value: unknown): number | undefined {
   return Number.isInteger(parsed) && parsed >= 0 ? parsed : undefined;
 }
 
+function textOffsetsInRoot(
+  root: HTMLElement,
+  selection: Selection,
+): {
+  start: number;
+  end: number;
+  text: string;
+} | null {
+  if (selection.rangeCount === 0 || selection.isCollapsed) return null;
+  const range = selection.getRangeAt(0);
+  if (!root.contains(range.commonAncestorContainer)) return null;
+  const pre = document.createRange();
+  pre.selectNodeContents(root);
+  pre.setEnd(range.startContainer, range.startOffset);
+  const start = pre.toString().length;
+  const text = range.toString();
+  if (!text.trim()) return null;
+  return { start, end: start + text.length, text };
+}
+
+function resolveThoughtRange(
+  html: string,
+  offsets: { start: number; end: number; text: string },
+): string | null {
+  const range = htmlRangeFromTextOffsets(html, offsets.start, offsets.end);
+  if (!range || !canUseThoughtRange(html, range)) return null;
+  const [htmlStart, htmlEnd] = range.split("-").map(Number);
+  if (
+    htmlSlicePlainText(html, htmlStart, htmlEnd).trim() !== offsets.text.trim()
+  ) {
+    return null;
+  }
+  return range;
+}
+
 /** 判断下标是否落在 HTML 标签内部（含属性） */
 function isInsideHtmlTag(html: string, index: number): boolean {
   const lastOpen = html.lastIndexOf("<", index);
@@ -192,6 +232,12 @@ const App: React.FC = () => {
     top: number;
     left: number;
   } | null>(null);
+  const [selectionPos, setSelectionPos] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
+  const [selectionComposerOpen, setSelectionComposerOpen] = useState(false);
+  const [selectionRange, setSelectionRange] = useState("");
   const [footnoteVisible, setFootnoteVisible] = useState(false);
   const [footnoteText, setFootnoteText] = useState("");
   const [footnotePos, setFootnotePos] = useState<{
@@ -226,10 +272,17 @@ const App: React.FC = () => {
   } | null>(null);
   const thoughtSubmittingRef = useRef(false);
   const currentRangeRef = useRef("");
+  const bestThoughtsVisibleRef = useRef(false);
+  const selectionOffsetsRef = useRef<{
+    start: number;
+    end: number;
+    text: string;
+  } | null>(null);
   const pendingAddRef = useRef<{
     content: string;
     abstract: string;
     range: string;
+    source: "underline" | "selection";
   } | null>(null);
 
   useEffect(() => {
@@ -252,6 +305,10 @@ const App: React.FC = () => {
   useEffect(() => {
     currentRangeRef.current = currentRange;
   }, [currentRange]);
+
+  useEffect(() => {
+    bestThoughtsVisibleRef.current = bestThoughtsVisible;
+  }, [bestThoughtsVisible]);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -432,8 +489,31 @@ const App: React.FC = () => {
           pendingAddRef.current = null;
           thoughtSubmittingRef.current = false;
           setThoughtSubmitting(false);
+          if (!pending) {
+            break;
+          }
+          if (pending.source === "selection") {
+            message.success("想法已发布");
+            setSelectionPos(null);
+            setSelectionComposerOpen(false);
+            setSelectionRange("");
+            selectionOffsetsRef.current = null;
+            window.getSelection()?.removeAllRanges();
+            // 热门列表未打开时不插入、不强开
+            if (
+              bestThoughtsVisibleRef.current &&
+              pending.range === currentRangeRef.current
+            ) {
+              setBestThoughts(list => [
+                thoughtFromAddResult(payload, pending),
+                ...list,
+              ]);
+              setComposerEpoch(n => n + 1);
+            }
+            break;
+          }
           // 换划线后回包对不上当前 range，丢弃以免插到错误列表
-          if (!pending || pending.range !== currentRangeRef.current) {
+          if (pending.range !== currentRangeRef.current) {
             break;
           }
           setBestThoughts(list => [
@@ -526,6 +606,10 @@ const App: React.FC = () => {
     setUnderlines([]);
     setBestThoughts([]);
     setBestThoughtsVisible(false);
+    setSelectionPos(null);
+    setSelectionComposerOpen(false);
+    setSelectionRange("");
+    selectionOffsetsRef.current = null;
     const chapter = chapters[idx];
     currentChapterUidRef.current = chapter.chapterUid;
 
@@ -564,6 +648,10 @@ const App: React.FC = () => {
     // 其次：检查划线点击
     const underlineEl = target.closest(".hot-underline") as HTMLElement;
     if (underlineEl) {
+      setSelectionPos(null);
+      setSelectionComposerOpen(false);
+      setSelectionRange("");
+      selectionOffsetsRef.current = null;
       const rect = underlineEl.getBoundingClientRect();
       setPopoverPos({
         top: rect.top + rect.height,
@@ -621,7 +709,12 @@ const App: React.FC = () => {
   ) => {
     if (!currentBook || !catalog[currentChapterIdx] || !currentRange) return;
     const abstract = bestThoughts[0]?.abstract || underlineAbstract;
-    pendingAddRef.current = { content, abstract, range: currentRange };
+    pendingAddRef.current = {
+      content,
+      abstract,
+      range: currentRange,
+      source: "underline",
+    };
     thoughtSubmittingRef.current = true;
     setThoughtSubmitting(true);
     vscode.postMessage({
@@ -636,6 +729,87 @@ const App: React.FC = () => {
         visibility,
       },
     });
+  };
+
+  const handleOpenSelectionComposer = () => {
+    if (!chapterContent) {
+      message.warning("无法定位这段原文，请换选一段");
+      return;
+    }
+    const offsets = selectionOffsetsRef.current;
+    if (!offsets) {
+      message.warning("无法定位这段原文，请换选一段");
+      return;
+    }
+    const range = resolveThoughtRange(chapterContent.html, offsets);
+    if (!range) {
+      message.warning("无法定位这段原文，请换选一段");
+      return;
+    }
+    setSelectionRange(range);
+    setSelectionComposerOpen(true);
+  };
+
+  const handleSubmitSelectionThought = (
+    content: string,
+    visibility: ThoughtVisibility,
+  ) => {
+    if (!currentBook || !catalog[currentChapterIdx] || !chapterContent) return;
+    const offsets = selectionOffsetsRef.current;
+    if (!offsets) {
+      message.warning("无法定位这段原文，请换选一段");
+      return;
+    }
+    const range = resolveThoughtRange(chapterContent.html, offsets);
+    if (!range) {
+      message.warning("无法定位这段原文，请换选一段");
+      return;
+    }
+    const abstract = offsets.text.trim();
+    pendingAddRef.current = {
+      content,
+      abstract,
+      range,
+      source: "selection",
+    };
+    thoughtSubmittingRef.current = true;
+    setThoughtSubmitting(true);
+    vscode.postMessage({
+      command: "WEREAD_ADD_THOUGHT",
+      payload: {
+        bookId: currentBook.bookId,
+        chapterUid: catalog[currentChapterIdx].chapterUid,
+        chapterIdx: parseChapterIdx(catalog[currentChapterIdx].chapterIdx),
+        range,
+        abstract,
+        content,
+        visibility,
+      },
+    });
+  };
+
+  const handleContentMouseUp = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest(".hot-underline")) {
+      return;
+    }
+    const selection = window.getSelection();
+    const root = document.querySelector(".xhtml-content") as HTMLElement | null;
+    const offsets =
+      selection && root ? textOffsetsInRoot(root, selection) : null;
+    if (!offsets || !selection) {
+      if (!selectionComposerOpen) {
+        setSelectionPos(null);
+        setSelectionRange("");
+        selectionOffsetsRef.current = null;
+      }
+      return;
+    }
+    const rect = selection.getRangeAt(0).getBoundingClientRect();
+    selectionOffsetsRef.current = offsets;
+    setSelectionPos({ top: rect.bottom + 4, left: rect.left });
+    setSelectionComposerOpen(false);
+    setSelectionRange("");
   };
 
   const handleContentMouseOver = (e: React.MouseEvent) => {
@@ -666,6 +840,10 @@ const App: React.FC = () => {
     setUnderlines([]);
     setBestThoughts([]);
     setBestThoughtsVisible(false);
+    setSelectionPos(null);
+    setSelectionComposerOpen(false);
+    setSelectionRange("");
+    selectionOffsetsRef.current = null;
     currentChapterUidRef.current = null;
   };
 
@@ -802,6 +980,7 @@ const App: React.FC = () => {
           <div
             className="reader-content"
             onClick={handleContentClick}
+            onMouseUp={handleContentMouseUp}
             onMouseOver={handleContentMouseOver}
             onMouseOut={handleContentMouseOut}
           >
@@ -1040,6 +1219,49 @@ const App: React.FC = () => {
           }}
         />
       </Popover>
+
+      {selectionPos && (
+        <Popover
+          open={selectionComposerOpen}
+          onOpenChange={visible => {
+            if (!visible) {
+              setSelectionComposerOpen(false);
+            }
+          }}
+          trigger="click"
+          placement="bottomLeft"
+          content={
+            selectionRange ? (
+              <div
+                style={{
+                  maxWidth: "300px",
+                  minWidth: "150px",
+                }}
+              >
+                <ThoughtComposer
+                  key={selectionRange}
+                  submitting={thoughtSubmitting}
+                  onSubmit={handleSubmitSelectionThought}
+                />
+              </div>
+            ) : null
+          }
+        >
+          <Button
+            size="small"
+            style={{
+              position: "fixed",
+              top: selectionPos.top,
+              left: selectionPos.left,
+              zIndex: 10000,
+            }}
+            onMouseDown={e => e.preventDefault()}
+            onClick={handleOpenSelectionComposer}
+          >
+            写想法
+          </Button>
+        </Popover>
+      )}
 
       <Drawer
         title="热门想法"

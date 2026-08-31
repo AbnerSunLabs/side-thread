@@ -53,3 +53,11 @@ export function htmlRangeFromTextOffsets(
   if (!canInjectUnderlineRange(html, htmlStart, htmlEnd)) return null;
   return `${htmlStart}-${htmlEnd}`;
 }
+
+export function htmlSlicePlainText(
+  html: string,
+  start: number,
+  end: number,
+): string {
+  return html.slice(start, end).replace(/<[^>]+>/g, "");
+}

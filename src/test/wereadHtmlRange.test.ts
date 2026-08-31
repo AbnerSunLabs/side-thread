@@ -3,6 +3,7 @@ import { describe, it } from "mocha";
 import {
   canUseThoughtRange,
   htmlRangeFromTextOffsets,
+  htmlSlicePlainText,
 } from "../core/wereadHtmlRange";
 
 describe("wereadHtmlRange", () => {
@@ -28,5 +29,9 @@ describe("wereadHtmlRange", () => {
     assert.equal(canUseThoughtRange("<p>hello</p>", "3-8"), true);
     assert.equal(canUseThoughtRange("<p>hello</p>", "2-8"), false);
     assert.equal(canUseThoughtRange("<p>hello</p>", "nope"), false);
+  });
+
+  it("strips tags from an html slice", () => {
+    assert.equal(htmlSlicePlainText("<p>hello</p>", 3, 8), "hello");
   });
 });
