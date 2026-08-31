@@ -1,0 +1,49 @@
+src/test/wereadHtmlRange.test.ts
+  s_afee3e47d0d4f8::t_758529e65949f0 36
+  s_63a644c56f3bd9::t_c69cb06261388e 6,33-35
+src/core/wereadHtmlRange.ts
+  s_afee3e47d0d4f8::t_f9b826089ae705 56-63
+docs/prd/weread-thoughts-like-comment.md
+  s_afee3e47d0d4f8::t_a627043ca73991 1-4,6-51
+  s_afee3e47d0d4f8::t_11378a136fe9fd 5
+weread/src/App.tsx
+  s_afee3e47d0d4f8::t_e24e179b518d16 800,808
+  s_afee3e47d0d4f8::t_01f2d06835180a 1223-1233,1246-1263
+  s_afee3e47d0d4f8::t_d770922b4730f5 1234-1244
+  s_afee3e47d0d4f8::t_7c796d12f2df5c 651-654
+  s_afee3e47d0d4f8::t_d35f123415735c 712-717
+  s_afee3e47d0d4f8::t_3aad0a6e7ecdb2 734-758,764-767,769-799,801-807,809-814
+  s_afee3e47d0d4f8::t_d375a5e4f1157b 30-34
+  s_afee3e47d0d4f8::t_7cc642e5874a80 759-763,768
+  s_afee3e47d0d4f8::t_6d0e33bd11dcb0 310-312,492-514,516,609-612,843-846
+  s_afee3e47d0d4f8::t_3cb727653b1b43 983
+  s_afee3e47d0d4f8::t_63c63ae51dd1c9 235-240,275-280,285
+  s_afee3e47d0d4f8::t_0947151fccfe72 309
+  s_afee3e47d0d4f8::t_ba28ba03c0b8cb 1245
+  s_afee3e47d0d4f8::t_eab043d20bac93 1264-1265
+  s_afee3e47d0d4f8::t_32253c60489217 125-159
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "d9b15fe0e71361d729761753ee8c8e4540045d65",
+  "prompts": {},
+  "sessions": {
+    "s_63a644c56f3bd9": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "6ed64d1d-fb59-4c4a-8fbf-19f252618571",
+        "model": "grok-4.6"
+      },
+      "human_author": "AbnerSun <sunyujiejohn@sina.com>"
+    },
+    "s_afee3e47d0d4f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "95a14676-8a1d-480d-af9c-c0c22736e02e",
+        "model": "cursor-grok-4.6-high"
+      },
+      "human_author": "AbnerSun <sunyujiejohn@sina.com>"
+    }
+  }
+}
