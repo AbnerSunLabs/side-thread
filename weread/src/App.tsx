@@ -186,6 +186,7 @@ const App: React.FC = () => {
   const [likingId, setLikingId] = useState<string | null>(null);
   const [thoughtSubmitting, setThoughtSubmitting] = useState(false);
   const [currentRange, setCurrentRange] = useState("");
+  const [composerEpoch, setComposerEpoch] = useState(0);
   const [underlineAbstract, setUnderlineAbstract] = useState("");
   const [popoverPos, setPopoverPos] = useState<{
     top: number;
@@ -224,9 +225,12 @@ const App: React.FC = () => {
     previous: { likeCount: number; liked: boolean };
   } | null>(null);
   const thoughtSubmittingRef = useRef(false);
-  const pendingAddRef = useRef<{ content: string; abstract: string } | null>(
-    null,
-  );
+  const currentRangeRef = useRef("");
+  const pendingAddRef = useRef<{
+    content: string;
+    abstract: string;
+    range: string;
+  } | null>(null);
 
   useEffect(() => {
     catalogRef.current = catalog;
@@ -244,6 +248,10 @@ const App: React.FC = () => {
   useEffect(() => {
     viewRef.current = view;
   }, [view]);
+
+  useEffect(() => {
+    currentRangeRef.current = currentRange;
+  }, [currentRange]);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -420,40 +428,54 @@ const App: React.FC = () => {
           likeRollbackRef.current = null;
           break;
         case "WEREAD_ADD_THOUGHT_RESULT": {
-          const fallback = pendingAddRef.current ?? {
-            content: "",
-            abstract: "",
-          };
-          setBestThoughts(list => [
-            thoughtFromAddResult(payload, fallback),
-            ...list,
-          ]);
+          const pending = pendingAddRef.current;
+          pendingAddRef.current = null;
           thoughtSubmittingRef.current = false;
           setThoughtSubmitting(false);
-          pendingAddRef.current = null;
+          // 换划线后回包对不上当前 range，丢弃以免插到错误列表
+          if (!pending || pending.range !== currentRangeRef.current) {
+            break;
+          }
+          setBestThoughts(list => [
+            thoughtFromAddResult(payload, pending),
+            ...list,
+          ]);
+          setComposerEpoch(n => n + 1);
           break;
         }
         case "WEREAD_ERROR": {
-          const rollback = likeRollbackRef.current;
-          if (rollback) {
-            setBestThoughts(list =>
-              list.map(t =>
-                t.reviewId === rollback.reviewId
-                  ? {
-                      ...t,
-                      likeCount: rollback.previous.likeCount,
-                      liked: rollback.previous.liked,
-                    }
-                  : t,
-              ),
-            );
-            likeRollbackRef.current = null;
-            setLikingId(null);
+          const sourceCommand =
+            payload && typeof payload === "object"
+              ? (payload as { command?: unknown }).command
+              : undefined;
+          // 只回滚本次点赞失败，避免书架/章节等错误误还原已成功的赞
+          if (sourceCommand === "WEREAD_LIKE_THOUGHT") {
+            const rollback = likeRollbackRef.current;
+            if (rollback) {
+              setBestThoughts(list =>
+                list.map(t =>
+                  t.reviewId === rollback.reviewId
+                    ? {
+                        ...t,
+                        likeCount: rollback.previous.likeCount,
+                        liked: rollback.previous.liked,
+                      }
+                    : t,
+                ),
+              );
+              likeRollbackRef.current = null;
+              setLikingId(null);
+            }
           }
-          if (thoughtSubmittingRef.current) {
+          if (
+            sourceCommand === "WEREAD_ADD_THOUGHT" ||
+            (!sourceCommand && thoughtSubmittingRef.current)
+          ) {
             thoughtSubmittingRef.current = false;
             setThoughtSubmitting(false);
           }
+          // 热门列表失败也要露出空态和作曲器，不能一直转圈
+          setBestThoughtsLoading(false);
           message.error(payload.message);
           setLoading(false);
           break;
@@ -557,6 +579,7 @@ const App: React.FC = () => {
 
       const range = underlineEl.getAttribute("data-range") || "";
       setCurrentRange(range);
+      currentRangeRef.current = range;
       setUnderlineAbstract(underlineEl.textContent || "");
       if (range && currentBook && currentChapterIdx !== -1) {
         vscode.postMessage({
@@ -598,7 +621,7 @@ const App: React.FC = () => {
   ) => {
     if (!currentBook || !catalog[currentChapterIdx] || !currentRange) return;
     const abstract = bestThoughts[0]?.abstract || underlineAbstract;
-    pendingAddRef.current = { content, abstract };
+    pendingAddRef.current = { content, abstract, range: currentRange };
     thoughtSubmittingRef.current = true;
     setThoughtSubmitting(true);
     vscode.postMessage({
@@ -958,7 +981,7 @@ const App: React.FC = () => {
                   )}
                 </div>
                 <ThoughtComposer
-                  key={currentRange}
+                  key={`${currentRange}-${composerEpoch}`}
                   submitting={thoughtSubmitting}
                   onSubmit={handleSubmitThought}
                 />

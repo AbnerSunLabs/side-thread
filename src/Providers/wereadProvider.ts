@@ -326,6 +326,7 @@ export class WereadProvider extends BaseWebviewProvider {
         command: "WEREAD_ERROR",
         payload: {
           message: error instanceof Error ? error.message : "请求失败",
+          command: message.command,
         },
       });
     }
