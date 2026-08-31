@@ -1,3 +1,7 @@
+import {
+    ThoughtVisibility,
+    visibilityToAddPayload,
+} from "../../../core/wereadThoughts";
 import {get, postJSON} from "../utils/request";
 
 // 评分
@@ -33,7 +37,75 @@ export enum ReviewAccessibility {
     /**
      * 公开，所有人可见
      */
-    Public
+    Public,
+
+    /**
+     * 屏蔽好友（官方 friendNotSee）
+     */
+    HideFromFriends,
+}
+
+export type AddThoughtInput = {
+    bookId: string;
+    chapterUid: number;
+    chapterIdx?: number;
+    range: string;
+    abstract: string;
+    content: string;
+    visibility: ThoughtVisibility;
+};
+
+export function buildReviewLikeBody(reviewId: string, isLike: boolean) {
+    return {reviewId, isLike: isLike ? (1 as const) : (0 as const)};
+}
+
+export function buildReviewAddThoughtBody(input: AddThoughtInput) {
+    const body: Record<string, unknown> = {
+        bookId: input.bookId,
+        content: input.content,
+        type: 1,
+        chapterUid: input.chapterUid,
+        range: input.range,
+        abstract: input.abstract,
+        ...visibilityToAddPayload(input.visibility),
+    };
+    if (input.chapterIdx != null) {
+        body.chapterIdx = input.chapterIdx;
+    }
+    return body;
+}
+
+function assertReviewWriteOk(data: any) {
+    const code = data?.errCode;
+    if (typeof code === "number" && code !== 0) {
+        throw new Error(String(data.errMsg || "请求失败"));
+    }
+    return data;
+}
+
+export async function web_review_like(
+    reviewId: string,
+    isLike: boolean,
+    cookie = "",
+) {
+    const resp = await postJSON(
+        "https://weread.qq.com/web/review/like",
+        buildReviewLikeBody(reviewId, isLike),
+        {cookie},
+    );
+    return assertReviewWriteOk(await resp.json());
+}
+
+export async function web_review_add_thought(
+    input: AddThoughtInput,
+    cookie = "",
+) {
+    const resp = await postJSON(
+        "https://weread.qq.com/web/review/add",
+        buildReviewAddThoughtBody(input),
+        {cookie},
+    );
+    return assertReviewWriteOk(await resp.json());
 }
 
 
