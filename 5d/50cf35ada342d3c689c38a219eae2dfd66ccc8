@@ -1,0 +1,25 @@
+src/test/wereadThoughts.test.ts
+  s_a9a80da9c7210c::t_c0934e1c253d95 7-8
+  s_a9a80da9c7210c::t_e840ac26cfbfd8 58-75
+src/core/wereadThoughts.ts
+  s_a9a80da9c7210c::t_73ebe41c761d10 64-135
+src/Providers/wereadProvider.ts
+  s_a9a80da9c7210c::t_d122b457bf9705 14-17,19-22
+  s_a9a80da9c7210c::t_4e163e473c0722 256-278
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "5d50cf35ada342d3c689c38a219eae2dfd66ccc8",
+  "prompts": {},
+  "sessions": {
+    "s_a9a80da9c7210c": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "538bbbd6-efef-423e-aa40-ba7258063cd9",
+        "model": "cursor-grok-4.5-medium"
+      },
+      "human_author": "AbnerSun <sunyujiejohn@sina.com>"
+    }
+  }
+}
