@@ -69,6 +69,20 @@ const THOUGHT_VISIBILITIES: ReadonlySet<string> = new Set([
   "private",
 ]);
 
+export function parseThoughtRequestId(payload: unknown): number | undefined {
+  if (!payload || typeof payload !== "object") return undefined;
+  const id = (payload as { requestId?: unknown }).requestId;
+  return typeof id === "number" && Number.isFinite(id) ? id : undefined;
+}
+
+export function isMatchingThoughtRequest(
+  pendingId: number | null | undefined,
+  payload: unknown,
+): boolean {
+  const incoming = parseThoughtRequestId(payload);
+  return pendingId != null && incoming != null && pendingId === incoming;
+}
+
 export function assertLikeThoughtPayload(payload: unknown): {
   reviewId: string;
   isLike: boolean;

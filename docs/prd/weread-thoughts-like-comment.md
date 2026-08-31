@@ -32,7 +32,7 @@
 
 ### 4.2 选中正文
 
-选中非空文本后出现「写想法」。`range` 必须与热门划线同一套章节 HTML 偏移；算不出则不发送。
+选中非空文本后出现「写想法」。`range` 按与 `.xhtml-content` 相同的展示 HTML（strip / TXT 包 `<p>`，注入热门划线 span 之前）计算文本偏移，再映射回未 strip 原文下标，与官方热门划线同一套坐标；算不出则不发送。
 
 ### 4.3 可见范围
 
@@ -48,4 +48,4 @@
 
 ## 6. 验收标准
 
-见 `.tasks/weread-thoughts-like-comment/spec.md` 的 Acceptance Criteria。本 PRD 审批前不写业务代码。
+见 `.tasks/weread-thoughts-like-comment/spec.md` 的 Acceptance Criteria。

@@ -19,6 +19,7 @@ import { setConfigByKey } from "../core/config";
 import {
   assertAddThoughtPayload,
   assertLikeThoughtPayload,
+  parseThoughtRequestId,
 } from "../core/wereadThoughts";
 import { WereadLogFn, WereadReadReporter } from "../api/weread/readSession";
 
@@ -265,13 +266,17 @@ export class WereadProvider extends BaseWebviewProvider {
 
         case "WEREAD_ADD_THOUGHT": {
           const input = assertAddThoughtPayload(payload);
+          const requestId = parseThoughtRequestId(payload);
           const result = await this.client.execute(
             web_review_add_thought,
             input,
           );
           webviewView.webview.postMessage({
             command: "WEREAD_ADD_THOUGHT_RESULT",
-            payload: result,
+            payload:
+              result && typeof result === "object"
+                ? { ...result, requestId }
+                : { requestId },
           });
           break;
         }
@@ -327,6 +332,7 @@ export class WereadProvider extends BaseWebviewProvider {
         payload: {
           message: error instanceof Error ? error.message : "请求失败",
           command: message.command,
+          requestId: parseThoughtRequestId(message.payload),
         },
       });
     }

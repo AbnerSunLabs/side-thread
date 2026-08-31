@@ -6,8 +6,10 @@ import {
   applyLikeToggle,
   assertAddThoughtPayload,
   assertLikeThoughtPayload,
+  isMatchingThoughtRequest,
   parseThoughtLikeCount,
   parseThoughtLiked,
+  parseThoughtRequestId,
   visibilityToAddPayload,
 } from "../core/wereadThoughts";
 
@@ -72,5 +74,14 @@ describe("wereadThoughts", () => {
       visibility: "hideFromFriends",
     });
     assert.equal(add.content, "想法");
+  });
+
+  it("matches add-thought results only when requestId is the in-flight one", () => {
+    assert.equal(parseThoughtRequestId({ requestId: 3, review: {} }), 3);
+    assert.equal(parseThoughtRequestId({ review: {} }), undefined);
+    assert.equal(isMatchingThoughtRequest(2, { requestId: 2 }), true);
+    assert.equal(isMatchingThoughtRequest(2, { requestId: 1 }), false);
+    assert.equal(isMatchingThoughtRequest(2, { review: {} }), false);
+    assert.equal(isMatchingThoughtRequest(null, { requestId: 1 }), false);
   });
 });

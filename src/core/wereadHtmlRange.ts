@@ -74,6 +74,29 @@ export function prepareThoughtRangeHtml(html: string, format: string): string {
   return html;
 }
 
+/** 与阅读器 `.xhtml-content` 相同的去壳（注入划线 span 之前）。 */
+export function stripChapterWrappers(html: string): string {
+  return html
+    .replace(/<\?xml.*\?>/gi, "")
+    .replace(/<!DOCTYPE.*?>/gi, "")
+    .replace(/<html[^>]*>/gi, "")
+    .replace(/<\/html>/gi, "")
+    .replace(/<head[^>]*>[\s\S]*<\/head>/gi, "")
+    .replace(/<body[^>]*>/gi, "")
+    .replace(/<\/body>/gi, "");
+}
+
+/** TXT 展示层把换行段包成 `<p>`；EPUB 只 strip，不含划线 span。 */
+export function displayedThoughtHtml(html: string, format: string): string {
+  if (format === "txt") {
+    return prepareThoughtRangeHtml(html, "txt")
+      .split("\n")
+      .map(p => `<p>${p}</p>`)
+      .join("");
+  }
+  return stripChapterWrappers(html);
+}
+
 /** 正文文本计数起点：`<body>` 之后；无 body 则从头。 */
 export function chapterBodyTextStart(html: string): number {
   const match = /<body\b[^>]*>/i.exec(html);
@@ -94,19 +117,124 @@ export function htmlRangeFromDisplayedTextOffsets(
   );
 }
 
+type HtmlTextChar = { htmlIndex: number; char: string };
+
+function collectTextChars(html: string, fromIndex = 0): HtmlTextChar[] {
+  const out: HtmlTextChar[] = [];
+  let inTag = false;
+  for (let i = fromIndex; i < html.length; i++) {
+    const ch = html[i];
+    if (ch === "<") {
+      inTag = true;
+      continue;
+    }
+    if (inTag) {
+      if (ch === ">") inTag = false;
+      continue;
+    }
+    out.push({ htmlIndex: i, char: ch });
+  }
+  return out;
+}
+
+function isHtmlWhitespace(ch: string): boolean {
+  return ch === " " || ch === "\n" || ch === "\r" || ch === "\t";
+}
+
+/** 把展示层文本下标对齐到原文文本下标，跳过一侧多出来的空白（TXT 换行、pretty-print 残留）。 */
+function alignedOriginalTextIndex(
+  originalChars: HtmlTextChar[],
+  displayChars: HtmlTextChar[],
+  targetDi: number,
+): number | null {
+  let oi = 0;
+  let di = 0;
+  while (di < targetDi) {
+    if (
+      oi < originalChars.length &&
+      di < displayChars.length &&
+      originalChars[oi].char === displayChars[di].char
+    ) {
+      oi += 1;
+      di += 1;
+      continue;
+    }
+    if (oi < originalChars.length && isHtmlWhitespace(originalChars[oi].char)) {
+      oi += 1;
+      continue;
+    }
+    if (di < displayChars.length && isHtmlWhitespace(displayChars[di].char)) {
+      di += 1;
+      continue;
+    }
+    return null;
+  }
+  return oi;
+}
+
+function mapDisplayOffsetsToOriginalRange(
+  originalHtml: string,
+  displayedHtml: string,
+  textStart: number,
+  textEnd: number,
+): string | null {
+  const displayChars = collectTextChars(displayedHtml);
+  const originalChars = collectTextChars(
+    originalHtml,
+    chapterBodyTextStart(originalHtml),
+  );
+  const startOi = alignedOriginalTextIndex(
+    originalChars,
+    displayChars,
+    textStart,
+  );
+  const endOi = alignedOriginalTextIndex(originalChars, displayChars, textEnd);
+  if (startOi == null || endOi == null || endOi === 0) return null;
+  let mappedStart = startOi;
+  while (
+    mappedStart < originalChars.length &&
+    isHtmlWhitespace(originalChars[mappedStart].char) &&
+    (textStart >= displayChars.length ||
+      originalChars[mappedStart].char !== displayChars[textStart].char)
+  ) {
+    mappedStart += 1;
+  }
+  if (mappedStart >= originalChars.length || mappedStart >= endOi) return null;
+  const htmlStart = originalChars[mappedStart].htmlIndex;
+  const htmlEnd = originalChars[endOi - 1].htmlIndex + 1;
+  if (!canInjectUnderlineRange(originalHtml, htmlStart, htmlEnd)) return null;
+  return `${htmlStart}-${htmlEnd}`;
+}
+
 export function resolveDisplayedThoughtRange(
-  html: string,
+  originalHtml: string,
+  displayedHtml: string,
   offsets: { start: number; end: number; text: string },
 ): string | null {
-  const range = htmlRangeFromDisplayedTextOffsets(
-    html,
+  const displayRange = htmlRangeFromTextOffsets(
+    displayedHtml,
     offsets.start,
     offsets.end,
   );
-  if (!range || !canUseThoughtRange(html, range)) return null;
+  if (!displayRange) return null;
+  const [displayStart, displayEnd] = displayRange.split("-").map(Number);
+  if (
+    htmlSlicePlainText(displayedHtml, displayStart, displayEnd).trim() !==
+    offsets.text.trim()
+  ) {
+    return null;
+  }
+  const range = mapDisplayOffsetsToOriginalRange(
+    originalHtml,
+    displayedHtml,
+    offsets.start,
+    offsets.end,
+  );
+  if (!range || !canUseThoughtRange(originalHtml, range)) return null;
   const [htmlStart, htmlEnd] = range.split("-").map(Number);
   if (
-    htmlSlicePlainText(html, htmlStart, htmlEnd).trim() !== offsets.text.trim()
+    htmlSlicePlainText(originalHtml, htmlStart, htmlEnd).trim() !==
+    offsets.text.trim()
   ) {
     return null;
   }

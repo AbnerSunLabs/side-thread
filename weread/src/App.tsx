@@ -23,13 +23,17 @@ import {
 } from "@ant-design/icons";
 import {
   applyLikeToggle,
+  isMatchingThoughtRequest,
   parseThoughtLikeCount,
   parseThoughtLiked,
+  parseThoughtRequestId,
   ThoughtVisibility,
 } from "core-weread/wereadThoughts";
 import {
+  displayedThoughtHtml,
   prepareThoughtRangeHtml,
   resolveDisplayedThoughtRange,
+  stripChapterWrappers,
 } from "core-weread/wereadHtmlRange";
 import { ThoughtComposer } from "./components/ThoughtComposer";
 import { vscode } from "./utils/vscode";
@@ -151,6 +155,51 @@ function chapterRangeHtml(content: ChapterContent): string {
   return prepareThoughtRangeHtml(decodeChapterHtml(content.html), content.format);
 }
 
+function replaceFootnotes(raw: string): string {
+  try {
+    const doc = new DOMParser().parseFromString(raw, "text/html");
+    const imgFootnotes = doc.querySelectorAll("img.qqreader-footnote");
+    imgFootnotes.forEach(img => {
+      const noteText =
+        img.getAttribute("alt") || img.getAttribute("title") || "";
+      const span = doc.createElement("span");
+      span.className = "weread-footnote-wrapper";
+      span.setAttribute("data-note", noteText);
+
+      const iconSpan = doc.createElement("span");
+      iconSpan.className = "weread-footnote-icon";
+      span.appendChild(iconSpan);
+
+      img.parentNode?.replaceChild(span, img);
+    });
+    return doc.body.innerHTML;
+  } catch (e) {
+    console.error("[Weread] Failed to parse and replace footnotes:", e);
+    return raw;
+  }
+}
+
+/** 与 `.xhtml-content` 相同：strip / TXT 包 p，注入划线 span 之前。 */
+function chapterDisplayHtml(content: ChapterContent): string {
+  const displayed = displayedThoughtHtml(
+    chapterRangeHtml(content),
+    content.format,
+  );
+  if (content.format === "txt") return displayed;
+  return replaceFootnotes(displayed);
+}
+
+function resolveChapterThoughtRange(
+  content: ChapterContent,
+  offsets: { start: number; end: number; text: string },
+): string | null {
+  return resolveDisplayedThoughtRange(
+    chapterRangeHtml(content),
+    chapterDisplayHtml(content),
+    offsets,
+  );
+}
+
 /** 判断下标是否落在 HTML 标签内部（含属性） */
 function isInsideHtmlTag(html: string, index: number): boolean {
   const lastOpen = html.lastIndexOf("<", index);
@@ -266,6 +315,8 @@ const App: React.FC = () => {
     previous: { likeCount: number; liked: boolean };
   } | null>(null);
   const thoughtSubmittingRef = useRef(false);
+  const thoughtRequestIdRef = useRef(0);
+  const likeInFlightRef = useRef(false);
   const currentRangeRef = useRef("");
   const bestThoughtsVisibleRef = useRef(false);
   const selectionOffsetsRef = useRef<{
@@ -278,6 +329,7 @@ const App: React.FC = () => {
     abstract: string;
     range: string;
     source: "underline" | "selection";
+    requestId: number;
   } | null>(null);
 
   useEffect(() => {
@@ -476,11 +528,15 @@ const App: React.FC = () => {
           break;
         }
         case "WEREAD_LIKE_THOUGHT_RESULT":
+          likeInFlightRef.current = false;
           setLikingId(null);
           likeRollbackRef.current = null;
           break;
         case "WEREAD_ADD_THOUGHT_RESULT": {
           const pending = pendingAddRef.current;
+          if (!isMatchingThoughtRequest(pending?.requestId, payload)) {
+            break;
+          }
           pendingAddRef.current = null;
           thoughtSubmittingRef.current = false;
           setThoughtSubmitting(false);
@@ -525,6 +581,7 @@ const App: React.FC = () => {
               : undefined;
           // 只回滚本次点赞失败，避免书架/章节等错误误还原已成功的赞
           if (sourceCommand === "WEREAD_LIKE_THOUGHT") {
+            likeInFlightRef.current = false;
             const rollback = likeRollbackRef.current;
             if (rollback) {
               setBestThoughts(list =>
@@ -542,10 +599,19 @@ const App: React.FC = () => {
               setLikingId(null);
             }
           }
-          if (
-            sourceCommand === "WEREAD_ADD_THOUGHT" ||
-            (!sourceCommand && thoughtSubmittingRef.current)
-          ) {
+          if (sourceCommand === "WEREAD_ADD_THOUGHT") {
+            const pending = pendingAddRef.current;
+            const incomingId = parseThoughtRequestId(payload);
+            if (
+              pending &&
+              (incomingId == null ||
+                isMatchingThoughtRequest(pending.requestId, payload))
+            ) {
+              pendingAddRef.current = null;
+              thoughtSubmittingRef.current = false;
+              setThoughtSubmitting(false);
+            }
+          } else if (!sourceCommand && thoughtSubmittingRef.current) {
             thoughtSubmittingRef.current = false;
             setThoughtSubmitting(false);
           }
@@ -657,8 +723,6 @@ const App: React.FC = () => {
       setBestThoughts([]);
       setLikingId(null);
       likeRollbackRef.current = null;
-      thoughtSubmittingRef.current = false;
-      setThoughtSubmitting(false);
 
       const range = underlineEl.getAttribute("data-range") || "";
       setCurrentRange(range);
@@ -679,7 +743,8 @@ const App: React.FC = () => {
   };
 
   const handleLikeThought = (thought: Thought) => {
-    if (likingId) return;
+    if (likeInFlightRef.current || likingId) return;
+    likeInFlightRef.current = true;
     const previous = {
       likeCount: thought.likeCount ?? 0,
       liked: thought.liked,
@@ -703,12 +768,16 @@ const App: React.FC = () => {
     visibility: ThoughtVisibility,
   ) => {
     if (!currentBook || !catalog[currentChapterIdx] || !currentRange) return;
+    if (thoughtSubmittingRef.current) return;
     const abstract = bestThoughts[0]?.abstract || underlineAbstract;
+    const requestId = thoughtRequestIdRef.current + 1;
+    thoughtRequestIdRef.current = requestId;
     pendingAddRef.current = {
       content,
       abstract,
       range: currentRange,
       source: "underline",
+      requestId,
     };
     thoughtSubmittingRef.current = true;
     setThoughtSubmitting(true);
@@ -722,6 +791,7 @@ const App: React.FC = () => {
         abstract,
         content,
         visibility,
+        requestId,
       },
     });
   };
@@ -736,10 +806,7 @@ const App: React.FC = () => {
       message.warning("无法定位这段原文，请换选一段");
       return;
     }
-    const range = resolveDisplayedThoughtRange(
-      chapterRangeHtml(chapterContent),
-      offsets,
-    );
+    const range = resolveChapterThoughtRange(chapterContent, offsets);
     if (!range) {
       message.warning("无法定位这段原文，请换选一段");
       return;
@@ -754,25 +821,26 @@ const App: React.FC = () => {
     visibility: ThoughtVisibility,
   ) => {
     if (!currentBook || !catalog[currentChapterIdx] || !chapterContent) return;
+    if (thoughtSubmittingRef.current) return;
     const offsets = selectionOffsetsRef.current;
     if (!offsets) {
       message.warning("无法定位这段原文，请换选一段");
       return;
     }
-    const range = resolveDisplayedThoughtRange(
-      chapterRangeHtml(chapterContent),
-      offsets,
-    );
+    const range = resolveChapterThoughtRange(chapterContent, offsets);
     if (!range) {
       message.warning("无法定位这段原文，请换选一段");
       return;
     }
     const abstract = offsets.text.trim();
+    const requestId = thoughtRequestIdRef.current + 1;
+    thoughtRequestIdRef.current = requestId;
     pendingAddRef.current = {
       content,
       abstract,
       range,
       source: "selection",
+      requestId,
     };
     thoughtSubmittingRef.current = true;
     setThoughtSubmitting(true);
@@ -786,6 +854,7 @@ const App: React.FC = () => {
         abstract,
         content,
         visibility,
+        requestId,
       },
     });
   };
@@ -864,45 +933,11 @@ const App: React.FC = () => {
 
     if (chapterContent.format === "txt") {
       const source = prepareThoughtRangeHtml(html, "txt");
-      return injectUnderlines(source, underlines)
-        .split("\n")
-        .map((p) => `<p>${p}</p>`)
-        .join("");
+      return displayedThoughtHtml(
+        injectUnderlines(source, underlines),
+        "txt",
+      );
     }
-
-    const stripChapterWrappers = (raw: string) =>
-      raw
-        .replace(/<\?xml.*\?>/gi, "")
-        .replace(/<!DOCTYPE.*?>/gi, "")
-        .replace(/<html[^>]*>/gi, "")
-        .replace(/<\/html>/gi, "")
-        .replace(/<head[^>]*>[\s\S]*<\/head>/gi, "")
-        .replace(/<body[^>]*>/gi, "")
-        .replace(/<\/body>/gi, "");
-
-    const replaceFootnotes = (raw: string) => {
-      try {
-        const doc = new DOMParser().parseFromString(raw, "text/html");
-        const imgFootnotes = doc.querySelectorAll("img.qqreader-footnote");
-        imgFootnotes.forEach((img) => {
-          const noteText =
-            img.getAttribute("alt") || img.getAttribute("title") || "";
-          const span = doc.createElement("span");
-          span.className = "weread-footnote-wrapper";
-          span.setAttribute("data-note", noteText);
-
-          const iconSpan = doc.createElement("span");
-          iconSpan.className = "weread-footnote-icon";
-          span.appendChild(iconSpan);
-
-          img.parentNode?.replaceChild(span, img);
-        });
-        return doc.body.innerHTML;
-      } catch (e) {
-        console.error("[Weread] Failed to parse and replace footnotes:", e);
-        return raw;
-      }
-    };
 
     // 先处理无划线版本，作为注入失败时的回退基准
     const baseHtml = replaceFootnotes(stripChapterWrappers(html));
