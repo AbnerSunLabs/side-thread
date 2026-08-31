@@ -11,7 +11,15 @@ import {
   web_book_underlines,
   web_book_readReviews,
 } from "../api/weread/api/book";
+import {
+  web_review_add_thought,
+  web_review_like,
+} from "../api/weread/api/review";
 import { setConfigByKey } from "../core/config";
+import {
+  assertAddThoughtPayload,
+  assertLikeThoughtPayload,
+} from "../core/wereadThoughts";
 import { WereadLogFn, WereadReadReporter } from "../api/weread/readSession";
 
 function stringifyWereadLogData(data: unknown): string {
@@ -240,6 +248,29 @@ export class WereadProvider extends BaseWebviewProvider {
           );
           webviewView.webview.postMessage({
             command: "WEREAD_BEST_THOUGHTS_DATA",
+            payload: result,
+          });
+          break;
+        }
+
+        case "WEREAD_LIKE_THOUGHT": {
+          const { reviewId, isLike } = assertLikeThoughtPayload(payload);
+          await this.client.execute(web_review_like, reviewId, isLike);
+          webviewView.webview.postMessage({
+            command: "WEREAD_LIKE_THOUGHT_RESULT",
+            payload: { reviewId, isLike },
+          });
+          break;
+        }
+
+        case "WEREAD_ADD_THOUGHT": {
+          const input = assertAddThoughtPayload(payload);
+          const result = await this.client.execute(
+            web_review_add_thought,
+            input,
+          );
+          webviewView.webview.postMessage({
+            command: "WEREAD_ADD_THOUGHT_RESULT",
             payload: result,
           });
           break;

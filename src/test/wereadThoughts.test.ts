@@ -4,6 +4,8 @@ import {
   DEFAULT_THOUGHT_VISIBILITY,
   THOUGHT_VISIBILITY_LABEL,
   applyLikeToggle,
+  assertAddThoughtPayload,
+  assertLikeThoughtPayload,
   parseThoughtLikeCount,
   parseThoughtLiked,
   visibilityToAddPayload,
@@ -52,5 +54,23 @@ describe("wereadThoughts", () => {
     assert.equal(parseThoughtLiked({ review: { isLike: 1 } }), true);
     assert.equal(parseThoughtLikeCount({ likesCount: 8 }), 8);
     assert.equal(parseThoughtLikeCount({}), 0);
+  });
+
+  it("rejects invalid like and add payloads", () => {
+    assert.throws(() => assertLikeThoughtPayload({}), /点赞参数无效/);
+    assert.deepEqual(assertLikeThoughtPayload({ reviewId: "r1", isLike: true }), {
+      reviewId: "r1",
+      isLike: true,
+    });
+    assert.throws(() => assertAddThoughtPayload({ bookId: "b" }), /想法参数无效/);
+    const add = assertAddThoughtPayload({
+      bookId: "b1",
+      chapterUid: 9,
+      range: "3-8",
+      abstract: "hello",
+      content: "  想法  ",
+      visibility: "hideFromFriends",
+    });
+    assert.equal(add.content, "想法");
   });
 });
