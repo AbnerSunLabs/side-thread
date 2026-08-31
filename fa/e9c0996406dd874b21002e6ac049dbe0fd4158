@@ -1,0 +1,21 @@
+src/api/weread/api/review.ts
+  s_40ecfe4fe81e01::t_37f2f4eb4399f8 1-4,40-108
+src/test/wereadReviewApi.test.ts
+  s_40ecfe4fe81e01::t_04e5365fa997a5 1-40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "fae9c0996406dd874b21002e6ac049dbe0fd4158",
+  "prompts": {},
+  "sessions": {
+    "s_40ecfe4fe81e01": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "ed6e7020-821b-4ec5-8141-ac4b0171d654",
+        "model": "cursor-grok-4.5-medium"
+      },
+      "human_author": "AbnerSun <sunyujiejohn@sina.com>"
+    }
+  }
+}
