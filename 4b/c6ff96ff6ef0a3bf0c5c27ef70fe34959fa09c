@@ -1,0 +1,21 @@
+src/core/wereadThoughts.ts
+  s_840f3671b73184::t_26c0b38ec05f65 1-63
+src/test/wereadThoughts.test.ts
+  s_840f3671b73184::t_751bed3e3010d8 1-56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "4bc6ff96ff6ef0a3bf0c5c27ef70fe34959fa09c",
+  "prompts": {},
+  "sessions": {
+    "s_840f3671b73184": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "8e8d11e2-5d49-47f2-92ea-ac3445031a44",
+        "model": "composer-2.5-fast"
+      },
+      "human_author": "AbnerSun <sunyujiejohn@sina.com>"
+    }
+  }
+}
