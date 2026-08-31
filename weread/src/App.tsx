@@ -28,9 +28,8 @@ import {
   ThoughtVisibility,
 } from "core-weread/wereadThoughts";
 import {
-  canUseThoughtRange,
-  htmlRangeFromTextOffsets,
-  htmlSlicePlainText,
+  prepareThoughtRangeHtml,
+  resolveDisplayedThoughtRange,
 } from "core-weread/wereadHtmlRange";
 import { ThoughtComposer } from "./components/ThoughtComposer";
 import { vscode } from "./utils/vscode";
@@ -142,19 +141,14 @@ function textOffsetsInRoot(
   return { start, end: start + text.length, text };
 }
 
-function resolveThoughtRange(
-  html: string,
-  offsets: { start: number; end: number; text: string },
-): string | null {
-  const range = htmlRangeFromTextOffsets(html, offsets.start, offsets.end);
-  if (!range || !canUseThoughtRange(html, range)) return null;
-  const [htmlStart, htmlEnd] = range.split("-").map(Number);
-  if (
-    htmlSlicePlainText(html, htmlStart, htmlEnd).trim() !== offsets.text.trim()
-  ) {
-    return null;
-  }
-  return range;
+function decodeChapterHtml(html: string): string {
+  if (!html.includes("&lt;")) return html;
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  return doc.documentElement.textContent || html;
+}
+
+function chapterRangeHtml(content: ChapterContent): string {
+  return prepareThoughtRangeHtml(decodeChapterHtml(content.html), content.format);
 }
 
 /** 判断下标是否落在 HTML 标签内部（含属性） */
@@ -238,6 +232,7 @@ const App: React.FC = () => {
   } | null>(null);
   const [selectionComposerOpen, setSelectionComposerOpen] = useState(false);
   const [selectionRange, setSelectionRange] = useState("");
+  const [selectionEpoch, setSelectionEpoch] = useState(0);
   const [footnoteVisible, setFootnoteVisible] = useState(false);
   const [footnoteText, setFootnoteText] = useState("");
   const [footnotePos, setFootnotePos] = useState<{
@@ -741,12 +736,16 @@ const App: React.FC = () => {
       message.warning("无法定位这段原文，请换选一段");
       return;
     }
-    const range = resolveThoughtRange(chapterContent.html, offsets);
+    const range = resolveDisplayedThoughtRange(
+      chapterRangeHtml(chapterContent),
+      offsets,
+    );
     if (!range) {
       message.warning("无法定位这段原文，请换选一段");
       return;
     }
     setSelectionRange(range);
+    setSelectionEpoch(n => n + 1);
     setSelectionComposerOpen(true);
   };
 
@@ -760,7 +759,10 @@ const App: React.FC = () => {
       message.warning("无法定位这段原文，请换选一段");
       return;
     }
-    const range = resolveThoughtRange(chapterContent.html, offsets);
+    const range = resolveDisplayedThoughtRange(
+      chapterRangeHtml(chapterContent),
+      offsets,
+    );
     if (!range) {
       message.warning("无法定位这段原文，请换选一段");
       return;
@@ -858,16 +860,11 @@ const App: React.FC = () => {
 
   const cleanedHtml = useMemo(() => {
     if (!chapterContent?.html) return "";
-    let html = chapterContent.html;
-
-    if (html.includes("&lt;")) {
-      const doc = new DOMParser().parseFromString(html, "text/html");
-      html = doc.documentElement.textContent || html;
-    }
+    const html = decodeChapterHtml(chapterContent.html);
 
     if (chapterContent.format === "txt") {
-      const paragraphs = html.split(/\r?\n/).filter((p) => p.trim() !== "");
-      return injectUnderlines(paragraphs.join("\n"), underlines)
+      const source = prepareThoughtRangeHtml(html, "txt");
+      return injectUnderlines(source, underlines)
         .split("\n")
         .map((p) => `<p>${p}</p>`)
         .join("");
@@ -1239,7 +1236,7 @@ const App: React.FC = () => {
                 }}
               >
                 <ThoughtComposer
-                  key={selectionRange}
+                  key={`${selectionRange}-${selectionEpoch}`}
                   submitting={thoughtSubmitting}
                   onSubmit={handleSubmitSelectionThought}
                 />
