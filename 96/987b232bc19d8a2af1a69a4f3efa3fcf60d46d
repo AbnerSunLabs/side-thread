@@ -1,0 +1,37 @@
+src/core/wereadOverlayPos.ts
+  s_89d9678b58455e::t_a01e023e88b702 1-21
+src/test/wereadOverlayPos.test.ts
+  s_89d9678b58455e::t_bfada46be19d26 1-33
+weread/src/App.tsx
+  s_89d9678b58455e::t_b1dd1e561e0c1c 205-223,227
+  s_89d9678b58455e::t_09c6c359ac0c1e 937-948
+  s_89d9678b58455e::t_9e919b72060d41 1046-1195
+  s_89d9678b58455e::t_fc893c5575c4d3 998
+  s_89d9678b58455e::t_a5a4eb3153e034 686-689
+  s_89d9678b58455e::t_0caef30397bbea 39
+weread/src/style/App.less
+  s_89d9678b58455e::t_edc59343edf5cc 161
+weread/tsconfig.app.json
+  s_89d9678b58455e::t_a747d801b23e0e 25-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "96987b232bc19d8a2af1a69a4f3efa3fcf60d46d",
+  "prompts": {},
+  "humans": {
+    "h_245285a78fca97": {
+      "author": "AbnerSun <sunyujiejohn@sina.com>"
+    }
+  },
+  "sessions": {
+    "s_89d9678b58455e": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "eb35d283-2ecc-41c6-baab-e9958b0be005",
+        "model": "grok-4.6"
+      },
+      "human_author": "AbnerSun <sunyujiejohn@sina.com>"
+    }
+  }
+}
