@@ -36,6 +36,7 @@ import {
   stripChapterWrappers,
 } from "core-weread/wereadHtmlRange";
 import { injectUnderlines } from "core-weread/wereadUnderlineInject";
+import { overlayPosInScroller } from "core-weread/wereadOverlayPos";
 import { ThoughtComposer } from "./components/ThoughtComposer";
 import { vscode } from "./utils/vscode";
 import { useReadSession } from "./hooks/useReadSession";
@@ -201,9 +202,29 @@ function resolveChapterThoughtRange(
   );
 }
 
+function posUnderAnchor(scroller: HTMLElement, anchor: HTMLElement) {
+  const scrollerRect = scroller.getBoundingClientRect();
+  const anchorRect = anchor.getBoundingClientRect();
+  return overlayPosInScroller(
+    {
+      top: scrollerRect.top,
+      left: scrollerRect.left,
+      bottom: scrollerRect.bottom,
+      scrollTop: scroller.scrollTop,
+      scrollLeft: scroller.scrollLeft,
+    },
+    {
+      top: anchorRect.top,
+      left: anchorRect.left,
+      bottom: anchorRect.bottom,
+    },
+  );
+}
+
 const App: React.FC = () => {
   const [groupOpen, setGroupOpen] = useState(false);
   const groupRef = useRef<HTMLDivElement>(null);
+  const readerContentRef = useRef<HTMLDivElement>(null);
   const { message } = AntdApp.useApp();
   const [loading, setLoading] = useState(false);
   const [books, setBooks] = useState<Book[]>([]);
@@ -662,11 +683,10 @@ const App: React.FC = () => {
       setSelectionComposerOpen(false);
       setSelectionRange("");
       selectionOffsetsRef.current = null;
-      const rect = underlineEl.getBoundingClientRect();
-      setPopoverPos({
-        top: rect.top + rect.height,
-        left: rect.left,
-      });
+      const scroller = readerContentRef.current;
+      if (scroller) {
+        setPopoverPos(posUnderAnchor(scroller, underlineEl));
+      }
       setBestThoughtsLoading(true);
       setBestThoughtsVisible(true);
       setUnderlineComposerOpen(false);
@@ -914,6 +934,18 @@ const App: React.FC = () => {
     return injectedHtml;
   }, [chapterContent, underlines]);
 
+  useEffect(() => {
+    if (!bestThoughtsVisible || !currentRange) return;
+    const scroller = readerContentRef.current;
+    if (!scroller) return;
+    const el = scroller.querySelector(
+      `.hot-underline[data-range="${currentRange}"]`,
+    );
+    if (el instanceof HTMLElement) {
+      setPopoverPos(posUnderAnchor(scroller, el));
+    }
+  }, [bestThoughtsVisible, currentRange, cleanedHtml]);
+
   useReadSession({
     enabled: view === "reader" && !loading && !!chapterContent,
     bookId: currentBook?.bookId,
@@ -963,6 +995,7 @@ const App: React.FC = () => {
             <span className="reader-title">{currentBook?.title}</span>
           </div>
           <div
+            ref={readerContentRef}
             className="reader-content"
             onClick={handleContentClick}
             onMouseUp={handleContentMouseUp}
@@ -1010,6 +1043,156 @@ const App: React.FC = () => {
                 </div>
               )
             )}
+            <Popover
+              open={bestThoughtsVisible}
+              onOpenChange={visible => {
+                if (!visible) {
+                  setBestThoughtsVisible(false);
+                  setUnderlineComposerOpen(false);
+                  setPopoverPos(null);
+                }
+              }}
+              trigger="click"
+              placement="bottomLeft"
+              autoAdjustOverflow={false}
+              getPopupContainer={trigger =>
+                trigger.parentElement ?? document.body
+              }
+              content={
+                <div
+                  style={{
+                    maxWidth: "300px",
+                    minWidth: "150px",
+                  }}
+                >
+                  {bestThoughtsLoading ? (
+                    <div style={{ padding: "20px", textAlign: "center" }}>
+                      <Spin size="small" />
+                    </div>
+                  ) : (
+                    <>
+                      <div
+                        style={{
+                          maxHeight: "400px",
+                          overflowY: "auto",
+                        }}
+                      >
+                        {bestThoughts.length > 0 ? (
+                          bestThoughts.map(thought => (
+                            <div
+                              key={thought.reviewId}
+                              style={{
+                                marginBottom: "12px",
+                                padding: "8px",
+                                borderBottom:
+                                  "1px solid var(--vscode-chat-requestBorder)",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "8px",
+                                  marginBottom: "8px",
+                                }}
+                              >
+                                <img
+                                  src={thought.user.avatar}
+                                  style={{
+                                    width: "20px",
+                                    height: "20px",
+                                    borderRadius: "50%",
+                                  }}
+                                />
+                                <span
+                                  style={{
+                                    fontSize:
+                                      "calc(var(--app-font-size) - 1px)",
+                                    fontWeight: 600,
+                                  }}
+                                >
+                                  {thought.user.name}
+                                </span>
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: "calc(var(--app-font-size) - 1px)",
+                                  color: "var(--vscode-editor-foreground)",
+                                  marginBottom: "4px",
+                                }}
+                              >
+                                {thought.content}
+                              </div>
+                              <button
+                                type="button"
+                                disabled={likingId === thought.reviewId}
+                                onClick={() => handleLikeThought(thought)}
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                  color: thought.liked
+                                    ? "var(--vscode-textLink-foreground, #1890ff)"
+                                    : "var(--vscode-descriptionForeground)",
+                                  fontSize: "11px",
+                                  cursor:
+                                    likingId === thought.reviewId
+                                      ? "not-allowed"
+                                      : "pointer",
+                                  opacity:
+                                    likingId === thought.reviewId ? 0.5 : 1,
+                                  background: "none",
+                                  border: "none",
+                                  padding: 0,
+                                }}
+                              >
+                                {thought.liked ? (
+                                  <LikeFilled />
+                                ) : (
+                                  <LikeOutlined />
+                                )}{" "}
+                                {thought.likeCount}
+                              </button>
+                            </div>
+                          ))
+                        ) : (
+                          <Empty
+                            description="暂无想法"
+                            image={Empty.PRESENTED_IMAGE_SIMPLE}
+                          />
+                        )}
+                      </div>
+                      {underlineComposerOpen ? (
+                        <ThoughtComposer
+                          key={`${currentRange}-${composerEpoch}`}
+                          submitting={thoughtSubmitting}
+                          onSubmit={handleSubmitThought}
+                        />
+                      ) : (
+                        <Button
+                          size="small"
+                          style={{ marginTop: 8 }}
+                          onClick={() => setUnderlineComposerOpen(true)}
+                        >
+                          写想法
+                        </Button>
+                      )}
+                    </>
+                  )}
+                </div>
+              }
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  top: popoverPos ? popoverPos.top : -999,
+                  left: popoverPos ? popoverPos.left : -999,
+                  width: "1px",
+                  height: "1px",
+                  pointerEvents: "none",
+                }}
+              />
+            </Popover>
           </div>
         </div>
       )}
@@ -1035,148 +1218,6 @@ const App: React.FC = () => {
           ))}
         </div>
       </Drawer>
-
-      <Popover
-        open={bestThoughtsVisible}
-        onOpenChange={(visible) => {
-          if (!visible) {
-            setBestThoughtsVisible(false);
-            setUnderlineComposerOpen(false);
-            setPopoverPos(null);
-          }
-        }}
-        trigger="click"
-        placement="bottomLeft"
-        content={
-          <div
-            style={{
-              maxWidth: "300px",
-              minWidth: "150px",
-            }}
-          >
-            {bestThoughtsLoading ? (
-              <div style={{ padding: "20px", textAlign: "center" }}>
-                <Spin size="small" />
-              </div>
-            ) : (
-              <>
-                <div
-                  style={{
-                    maxHeight: "400px",
-                    overflowY: "auto",
-                  }}
-                >
-                  {bestThoughts.length > 0 ? (
-                    bestThoughts.map(thought => (
-                      <div
-                        key={thought.reviewId}
-                        style={{
-                          marginBottom: "12px",
-                          padding: "8px",
-                          borderBottom:
-                            "1px solid var(--vscode-chat-requestBorder)",
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px",
-                            marginBottom: "8px",
-                          }}
-                        >
-                          <img
-                            src={thought.user.avatar}
-                            style={{
-                              width: "20px",
-                              height: "20px",
-                              borderRadius: "50%",
-                            }}
-                          />
-                          <span
-                            style={{
-                              fontSize: "calc(var(--app-font-size) - 1px)",
-                              fontWeight: 600,
-                            }}
-                          >
-                            {thought.user.name}
-                          </span>
-                        </div>
-                        <div
-                          style={{
-                            fontSize: "calc(var(--app-font-size) - 1px)",
-                            color: "var(--vscode-editor-foreground)",
-                            marginBottom: "4px",
-                          }}
-                        >
-                          {thought.content}
-                        </div>
-                        <button
-                          type="button"
-                          disabled={likingId === thought.reviewId}
-                          onClick={() => handleLikeThought(thought)}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "4px",
-                            color: thought.liked
-                              ? "var(--vscode-textLink-foreground, #1890ff)"
-                              : "var(--vscode-descriptionForeground)",
-                            fontSize: "11px",
-                            cursor:
-                              likingId === thought.reviewId
-                                ? "not-allowed"
-                                : "pointer",
-                            opacity: likingId === thought.reviewId ? 0.5 : 1,
-                            background: "none",
-                            border: "none",
-                            padding: 0,
-                          }}
-                        >
-                          {thought.liked ? <LikeFilled /> : <LikeOutlined />}{" "}
-                          {thought.likeCount}
-                        </button>
-                      </div>
-                    ))
-                  ) : (
-                    <Empty
-                      description="暂无想法"
-                      image={Empty.PRESENTED_IMAGE_SIMPLE}
-                    />
-                  )}
-                </div>
-                {underlineComposerOpen ? (
-                  <ThoughtComposer
-                    key={`${currentRange}-${composerEpoch}`}
-                    submitting={thoughtSubmitting}
-                    onSubmit={handleSubmitThought}
-                  />
-                ) : (
-                  <Button
-                    size="small"
-                    style={{ marginTop: 8 }}
-                    onClick={() => setUnderlineComposerOpen(true)}
-                  >
-                    写想法
-                  </Button>
-                )}
-              </>
-            )}
-          </div>
-        }
-      >
-        <div
-          style={{
-            position: "fixed",
-            top: popoverPos ? popoverPos.top : -999,
-            left: popoverPos ? popoverPos.left : -999,
-            width: "1px",
-            height: "1px",
-            pointerEvents: "none",
-            zIndex: 9999,
-          }}
-        />
-      </Popover>
 
       <Popover
         open={footnoteVisible}
