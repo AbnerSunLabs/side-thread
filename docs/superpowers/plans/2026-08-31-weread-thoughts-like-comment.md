@@ -1,6 +1,6 @@
 # 微信读书热门想法点赞与阅读中点评 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **归档（2026-09-01）**：功能已在 `main` 落地。现役行为与 UI 以 [设计文档](../specs/2026-08-31-weread-thoughts-like-comment-design.md) 和代码为准。下文是 2026-08-31 的任务清单（含已过期的中间步骤），不要再按勾选框重做。
 
 **Goal:** 阅读器热门想法可点赞、可在选中原文或热门划线下发表想法，全部走微信读书官方接口，同一账号在 App 可查。
 
@@ -56,12 +56,12 @@
 
 官方 `web/review/add` 可见范围字段与现有 `web_review_add` 三档对齐，并补官方第四档：
 
-| 档                | 文案     | payload               |
-| ----------------- | -------- | --------------------- |
-| `public`          | 公开     | `{}`                  |
-| `friends`         | 关注     | `{ friendship: 1 }`   |
+| 档                | 文案     | payload                      |
+| ----------------- | -------- | ---------------------------- |
+| `public`          | 公开     | `{}`                         |
+| `friends`         | 关注     | `{ friendship: 1 }`          |
 | `hideFromFriends` | 屏蔽好友 | `{ notVisibleToFriends: 1 }` |
-| `private`         | 私密     | `{ isPrivate: 1 }`    |
+| `private`         | 私密     | `{ isPrivate: 1 }`           |
 
 官方网页端 `web/review/add` 可见范围字段以 wrwebnjlogic 为准：`privateState=3` 发 `{ notVisibleToFriends: 1 }`（不是 `friendNotSee`）。公开 / 关注 / 私密仍是 `{}` / `{ friendship: 1 }` / `{ isPrivate: 1 }`。
 

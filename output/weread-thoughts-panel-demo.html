@@ -1,0 +1,628 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>划线想法面板 · UI 预览</title>
+    <style>
+      :root {
+        /* 默认：仓库 ylw-dark，不是 Dark+ 蓝 */
+        --app-font-size: 14px;
+        --reader-font-size: 16px;
+        --vscode-editor-background: #1a1c22;
+        --vscode-editor-foreground: #abb2bf;
+        --vscode-foreground: #c7ccd6;
+        --vscode-descriptionForeground: #abb2bf;
+        --vscode-textLink-foreground: #61afef;
+        --vscode-chat-requestBorder: #343a45;
+        --vscode-button-background: #404754;
+        --vscode-button-hoverBackground: #4d5563;
+        --vscode-button-foreground: #f8fafd;
+        --vscode-button-secondaryBackground: #30333d;
+        --vscode-button-secondaryForeground: #c0bdbd;
+        --vscode-input-background: #21252b;
+        --vscode-input-foreground: #abb2bf;
+        --vscode-input-border: #21252b;
+        --vscode-checkbox-border: #404754;
+        --vscode-focusBorder: #404754;
+        --vscode-dropdown-background: #21252b;
+        --vscode-dropdown-foreground: #abb2bf;
+        --vscode-widget-border: #23252c;
+        --page-bg: #12141a;
+        --frame: #23252c;
+        --ant-radius: 6px;
+        --ant-radius-lg: 8px;
+        --ant-shadow:
+          0 6px 16px 0 rgba(0, 0, 0, 0.32), 0 3px 6px -4px rgba(0, 0, 0, 0.48),
+          0 9px 28px 8px rgba(0, 0, 0, 0.2);
+        --ant-font:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, "Noto Sans SC", "PingFang SC", sans-serif;
+      }
+
+      html[data-theme="darkplus"] {
+        --vscode-editor-background: #1e1e1e;
+        --vscode-editor-foreground: #d4d4d4;
+        --vscode-foreground: #cccccc;
+        --vscode-descriptionForeground: #9d9d9d;
+        --vscode-textLink-foreground: #3794ff;
+        --vscode-chat-requestBorder: rgba(255, 255, 255, 0.12);
+        --vscode-button-background: #0e639c;
+        --vscode-button-hoverBackground: #1177bb;
+        --vscode-button-foreground: #ffffff;
+        --vscode-button-secondaryBackground: #3a3d41;
+        --vscode-button-secondaryForeground: #ffffff;
+        --vscode-input-background: #3c3c3c;
+        --vscode-input-foreground: #cccccc;
+        --vscode-input-border: #3c3c3c;
+        --vscode-checkbox-border: #3c3c3c;
+        --vscode-focusBorder: #007fd4;
+        --vscode-dropdown-background: #3c3c3c;
+        --vscode-dropdown-foreground: #cccccc;
+        --vscode-widget-border: #454545;
+        --page-bg: #111111;
+        --frame: #2d2d2d;
+      }
+
+      html[data-theme="light"] {
+        --vscode-editor-background: #ffffff;
+        --vscode-editor-foreground: #000000e0;
+        --vscode-foreground: #000000e0;
+        --vscode-descriptionForeground: #00000073;
+        --vscode-textLink-foreground: #006ab1;
+        --vscode-chat-requestBorder: rgba(0, 0, 0, 0.1);
+        --vscode-button-background: #007acc;
+        --vscode-button-hoverBackground: #0062a3;
+        --vscode-button-foreground: #ffffff;
+        --vscode-button-secondaryBackground: #e8e8e8;
+        --vscode-button-secondaryForeground: #333333;
+        --vscode-input-background: #ffffff;
+        --vscode-input-foreground: #333333;
+        --vscode-input-border: #cecece;
+        --vscode-focusBorder: #0090f1;
+        --vscode-dropdown-background: #ffffff;
+        --vscode-dropdown-foreground: #000000e0;
+        --vscode-widget-border: #d9d9d9;
+        --page-bg: #f5f5f5;
+        --frame: #d9d9d9;
+        --ant-shadow:
+          0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 3px 6px -4px rgba(0, 0, 0, 0.12),
+          0 9px 28px 8px rgba(0, 0, 0, 0.05);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--page-bg);
+        color: var(--vscode-foreground);
+        font-family: var(--ant-font);
+        font-size: 14px;
+      }
+
+      .stage {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 28px 20px 64px;
+      }
+
+      .toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+        color: var(--vscode-descriptionForeground);
+        font-size: 13px;
+      }
+
+      .sidebar {
+        background: var(--vscode-editor-background);
+        border: 1px solid var(--frame);
+        border-radius: var(--ant-radius-lg);
+        min-height: 560px;
+        padding: 12px 16px 40px;
+      }
+
+      .chapter {
+        font-family: "Songti SC", "Noto Serif SC", "Songti TC", serif;
+        font-size: var(--reader-font-size);
+        line-height: 1.85;
+        color: var(--vscode-editor-foreground);
+        max-width: 36em;
+      }
+
+      .hot-underline {
+        border-bottom: 1px dashed
+          color-mix(in srgb, var(--vscode-editor-foreground) 40%, transparent);
+        cursor: pointer;
+        padding-bottom: 1px;
+      }
+
+      .hot-underline:hover {
+        border-bottom: 1px solid var(--vscode-editor-foreground);
+      }
+
+      .anchor {
+        position: relative;
+        display: inline;
+      }
+
+      .thought-panel {
+        position: relative;
+        width: 292px;
+        margin: 12px 0 20px;
+        padding: 12px;
+        border-radius: var(--ant-radius-lg);
+        background: var(--vscode-editor-background);
+        box-shadow: var(--ant-shadow);
+      }
+
+      .thought-panel::after {
+        content: "";
+        position: absolute;
+        top: -6px;
+        left: 16px;
+        width: 8px;
+        height: 8px;
+        background: var(--vscode-editor-background);
+        transform: rotate(45deg);
+        box-shadow: -2px -2px 4px rgba(0, 0, 0, 0.04);
+      }
+
+      .panel-meta {
+        font-size: 12px;
+        color: var(--vscode-descriptionForeground);
+        margin: 0 0 4px;
+      }
+
+      .thought-list {
+        max-height: 280px;
+        overflow-y: auto;
+      }
+
+      .thought {
+        padding: 12px 0;
+        border-bottom: 1px solid
+          var(
+            --vscode-widget-border,
+            var(--vscode-chat-requestBorder, rgba(128, 128, 128, 0.28))
+          );
+      }
+
+      .thought:last-child {
+        border-bottom: none;
+      }
+
+      .thought-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      .avatar {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        flex: none;
+        display: grid;
+        place-items: center;
+        font-size: 10px;
+        color: #fff;
+        background: var(--vscode-button-background);
+      }
+
+      .avatar.alt {
+        background: #13c2c2;
+      }
+
+      .name {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--vscode-foreground);
+      }
+
+      .body {
+        font-size: 13px;
+        line-height: 1.5714;
+        color: var(--vscode-editor-foreground);
+        padding-left: 28px;
+      }
+
+      .like-row {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 8px;
+        padding-left: 28px;
+      }
+
+      .like {
+        font-family: var(--ant-font);
+        font-size: 12px;
+        line-height: 1;
+        border: none;
+        background: none;
+        padding: 0 4px;
+        height: 22px;
+        cursor: pointer;
+        color: var(--vscode-descriptionForeground);
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        border-radius: var(--ant-radius);
+      }
+
+      .like:hover,
+      .like[aria-pressed="true"] {
+        color: var(--vscode-editor-foreground);
+        background: color-mix(
+          in srgb,
+          var(--vscode-editor-foreground) 10%,
+          transparent
+        );
+      }
+
+      .empty {
+        padding: 24px 8px;
+        text-align: center;
+        color: var(--vscode-descriptionForeground);
+        font-size: 14px;
+      }
+
+      .compose-slot {
+        margin-top: 12px;
+      }
+
+      .thought-panel .compose-slot {
+        padding-top: 12px;
+        border-top: 1px solid var(--vscode-chat-requestBorder);
+      }
+
+      .ant-btn {
+        font-family: var(--ant-font);
+        font-size: 14px;
+        height: 32px;
+        padding: 0 15px;
+        border-radius: var(--ant-radius);
+        border: 1px solid var(--vscode-widget-border);
+        background: var(--vscode-editor-background);
+        color: var(--vscode-foreground);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+        transition: all 0.2s;
+      }
+
+      .ant-btn-sm {
+        height: 24px;
+        padding: 0 7px;
+        font-size: 14px;
+      }
+
+      .ant-btn-default:hover {
+        color: var(--vscode-button-foreground);
+        background: var(--vscode-button-background);
+        border-color: var(--vscode-button-background);
+      }
+
+      .ant-btn-primary {
+        background: var(--vscode-button-background);
+        border-color: var(--vscode-button-background);
+        color: var(--vscode-button-foreground);
+      }
+
+      .ant-btn-primary:hover {
+        background: var(--vscode-button-hoverBackground);
+        border-color: var(--vscode-button-hoverBackground);
+      }
+
+      .ant-btn-primary:disabled {
+        cursor: not-allowed;
+        opacity: 0.45;
+        filter: none;
+      }
+
+      .composer .ant-input {
+        width: 100%;
+        resize: none;
+        min-height: 54px;
+        font-family: var(--ant-font);
+        font-size: 14px;
+        line-height: 1.5714;
+        padding: 4px 11px;
+        border: 1px solid var(--vscode-input-border);
+        background: var(--vscode-input-background);
+        color: var(--vscode-input-foreground);
+        border-radius: var(--ant-radius);
+        transition: all 0.2s;
+      }
+
+      .composer .ant-input:hover,
+      .composer-bar .ant-select:hover {
+        border-color: var(--vscode-focusBorder);
+      }
+
+      .composer .ant-input:focus,
+      .composer-bar .ant-select:focus {
+        outline: none;
+        border-color: var(--vscode-focusBorder);
+        box-shadow: 0 0 0 1px var(--vscode-focusBorder);
+      }
+
+      .composer-bar {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 8px;
+      }
+
+      .composer-bar .ant-select {
+        font-family: var(--ant-font);
+        font-size: 14px;
+        height: 24px;
+        min-width: 108px;
+        padding: 0 8px;
+        background: var(--vscode-dropdown-background);
+        color: var(--vscode-dropdown-foreground);
+        border: 1px solid var(--vscode-widget-border);
+        border-radius: var(--ant-radius);
+      }
+
+      .current-vis {
+        font-size: 14px;
+        color: var(--vscode-descriptionForeground);
+      }
+
+      .composer-bar .ant-btn-primary {
+        margin-left: auto;
+      }
+
+      #sel {
+        margin-top: 18px;
+      }
+
+      #sel {
+        margin-top: 18px;
+      }
+
+      .hint {
+        margin-top: 24px;
+        color: var(--vscode-descriptionForeground);
+        font-size: 13px;
+        line-height: 1.6;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="stage">
+      <div class="toolbar">
+        <span>预览 · 点划线看面板，点「写想法」才出输入框</span>
+        <button
+          type="button"
+          class="ant-btn ant-btn-sm ant-btn-default"
+          id="theme"
+        >
+          对照 Dark+
+        </button>
+      </div>
+
+      <div class="sidebar">
+        <p class="chapter">
+          人是被悬挂在自己编织的意义之网上的动物。
+          <span class="anchor">
+            <span class="hot-underline" id="mark">文化就是这些网。</span>
+          </span>
+        </p>
+
+        <aside class="thought-panel" id="panel" hidden>
+          <div class="panel-meta" id="meta">想法 · 2</div>
+          <div class="thought-list" id="list"></div>
+          <div class="compose-slot" id="slot"></div>
+        </aside>
+
+        <p class="chapter">
+          因此，对文化的分析不是一种寻求规律的实验科学，而是一种探求意义的解释科学。
+        </p>
+
+        <button
+          type="button"
+          class="ant-btn ant-btn-sm ant-btn-default"
+          id="sel"
+        >
+          写想法
+        </button>
+        <div class="compose-slot" id="sel-slot"></div>
+      </div>
+
+      <p class="hint">
+        默认配色来自仓库 <code>ylw-dark</code>：发送按钮是灰底
+        <code>button.background</code>，点赞跟正文色，输入框激活边框用控件描边
+        <code>#404754</code>（本主题官方 focusBorder
+        和编辑器底同色，看不见）。右上角可切到 Dark+ 看为什么之前像蓝。
+      </p>
+    </div>
+
+    <script>
+      const VIS = [
+        ["hideFromFriends", "屏蔽好友"],
+        ["public", "公开"],
+        ["friends", "关注"],
+        ["private", "私密"],
+      ];
+
+      const thoughts = [
+        {
+          id: "1",
+          name: "我",
+          me: true,
+          text: "网本身也是读出来的。",
+          liked: false,
+          count: 0,
+        },
+        {
+          id: "2",
+          name: "林觉",
+          me: false,
+          text: "解释学读到这里才落地：不是找定律，是把这张网读厚。",
+          liked: true,
+          count: 12,
+        },
+      ];
+
+      const listEl = document.getElementById("list");
+      const metaEl = document.getElementById("meta");
+      const panel = document.getElementById("panel");
+      const slot = document.getElementById("slot");
+      const selSlot = document.getElementById("sel-slot");
+
+      function heart(on) {
+        return on
+          ? '<svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 10.4S1.2 7.2 1.2 4.1A2.7 2.7 0 0 1 6 2.6a2.7 2.7 0 0 1 4.8 1.5C10.8 7.2 6 10.4 6 10.4z"/></svg>'
+          : '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M6 10.4S1.2 7.2 1.2 4.1A2.7 2.7 0 0 1 6 2.6a2.7 2.7 0 0 1 4.8 1.5C10.8 7.2 6 10.4 6 10.4z"/></svg>';
+      }
+
+      function renderList() {
+        metaEl.textContent = thoughts.length
+          ? "想法 · " + thoughts.length
+          : "想法";
+        if (!thoughts.length) {
+          listEl.innerHTML = '<div class="empty">暂无想法</div>';
+          return;
+        }
+        listEl.innerHTML = thoughts
+          .map(
+            (t) => `
+        <article class="thought">
+          <div class="thought-head">
+            <span class="avatar ${t.me ? "" : "alt"}">${t.name.slice(0, 1)}</span>
+            <span class="name">${t.name}</span>
+          </div>
+          <div class="body">${t.text}</div>
+          <div class="like-row">
+            <button type="button" class="like" data-id="${t.id}" aria-pressed="${t.liked}">
+              ${heart(t.liked)} ${t.count}
+            </button>
+          </div>
+        </article>
+      `,
+          )
+          .join("");
+      }
+
+      function composerHtml(id) {
+        return `
+        <form class="composer" data-form="${id}">
+          <textarea class="ant-input" name="content" placeholder="写想法" rows="2"></textarea>
+          <div class="composer-bar">
+            <select class="ant-select" name="vis">
+              ${VIS.map(([v, l], i) => `<option value="${v}" ${i === 0 ? "selected" : ""}>${l}</option>`).join("")}
+            </select>
+            <span class="current-vis">屏蔽好友</span>
+            <button type="submit" class="ant-btn ant-btn-sm ant-btn-primary" disabled>发送</button>
+          </div>
+        </form>
+      `;
+      }
+
+      function wireComposer(root, onSend) {
+        const form = root.querySelector("form");
+        const ta = form.querySelector("textarea");
+        const sel = form.querySelector("select");
+        const label = form.querySelector(".current-vis");
+        const send = form.querySelector(".ant-btn-primary");
+        const sync = () => {
+          label.textContent = VIS.find(([v]) => v === sel.value)[1];
+          send.disabled = !ta.value.trim();
+        };
+        ta.addEventListener("input", sync);
+        sel.addEventListener("change", sync);
+        form.addEventListener("submit", (e) => {
+          e.preventDefault();
+          const text = ta.value.trim();
+          if (!text) return;
+          onSend(text);
+        });
+      }
+
+      function showWrite(target, onSend) {
+        target.innerHTML = composerHtml(target.id);
+        wireComposer(target, (text) => {
+          onSend(text);
+          showButton(target);
+        });
+        target.querySelector("textarea").focus();
+      }
+
+      function showButton(target) {
+        target.innerHTML =
+          '<button type="button" class="ant-btn ant-btn-sm ant-btn-default write">写想法</button>';
+        target.querySelector(".write").onclick = () =>
+          showWrite(target, (text) => {
+            thoughts.unshift({
+              id: String(Date.now()),
+              name: "我",
+              me: true,
+              text,
+              liked: false,
+              count: 0,
+            });
+            renderList();
+            panel.hidden = false;
+          });
+      }
+
+      document.getElementById("mark").addEventListener("click", () => {
+        panel.hidden = false;
+      });
+
+      listEl.addEventListener("click", (e) => {
+        const btn = e.target.closest(".like");
+        if (!btn) return;
+        const t = thoughts.find((x) => x.id === btn.dataset.id);
+        t.liked = !t.liked;
+        t.count += t.liked ? 1 : -1;
+        renderList();
+      });
+
+      document.getElementById("sel").addEventListener("click", () => {
+        showWrite(selSlot, (text) => {
+          thoughts.unshift({
+            id: String(Date.now()),
+            name: "我",
+            me: true,
+            text,
+            liked: false,
+            count: 0,
+          });
+          renderList();
+          panel.hidden = false;
+          selSlot.innerHTML = "";
+          alert("想法已发布");
+        });
+      });
+
+      const themes = [
+        { id: "", label: "对照 Dark+" },
+        { id: "darkplus", label: "对照浅色" },
+        { id: "light", label: "回到 ylw-dark" },
+      ];
+      document.getElementById("theme").addEventListener("click", (ev) => {
+        const cur = document.documentElement.getAttribute("data-theme") || "";
+        const i = themes.findIndex((t) => t.id === cur);
+        const next = themes[(i + 1) % themes.length];
+        if (next.id)
+          document.documentElement.setAttribute("data-theme", next.id);
+        else document.documentElement.removeAttribute("data-theme");
+        ev.target.textContent = next.label;
+      });
+
+      renderList();
+      showButton(slot);
+    </script>
+  </body>
+</html>

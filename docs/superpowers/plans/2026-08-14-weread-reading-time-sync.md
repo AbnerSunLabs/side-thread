@@ -1,8 +1,6 @@
 # 微信读书阅读时长同步 Implementation Plan
 
-> **状态（2026-08-14）**：已落地，本文是实现前计划，部分规则已过期（例如「只在切章上报固定 60 秒」「空闲只计到最后一次 ACTIVITY」）。现役行为以 [docs/weread-reading-time.md](../../weread-reading-time.md) 和 `src/api/weread/readSession.ts` 为准。
-
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **状态（2026-08-14）**：已落地，本文是实现前计划，部分规则已过期（例如「只在切章上报固定 60 秒」「空闲只计到最后一次 ACTIVITY」）。现役行为以 [docs/weread-reading-time.md](../../weread-reading-time.md) 和 `src/api/weread/readSession.ts` 为准。不要再按下文勾选框重做。
 
 **Goal:** 让插件内的真实阅读时长按微信读书官方网页规则上报，使微信读书 APP 的「今日阅读时长」能同步累计。
 

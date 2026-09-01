@@ -1,12 +1,12 @@
 # PRD：微信读书热门想法点赞与阅读中点评
 
-| 项       | 内容                                                                                                                                               |
-| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 状态     | 已实现（待 App 手动核对）                                                                                                                           |
-| 日期     | 2026-08-31                                                                                                                                         |
-| 模块     | 微信读书                                                                                                                                           |
-| 规格副本 | `.tasks/weread-thoughts-like-comment/spec.md`                                                                                                      |
-| 设计     | [docs/superpowers/specs/2026-08-31-weread-thoughts-like-comment-design.md](../superpowers/specs/2026-08-31-weread-thoughts-like-comment-design.md) |
+| 项           | 内容                                                                                                                                                       |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 状态         | 本地已实现（Marketplace / App 核对仍待发版）                                                                                                               |
+| 日期         | 2026-08-31（UI 现役说明更新于 2026-09-01）                                                                                                                 |
+| 模块         | 微信读书                                                                                                                                                   |
+| 设计（现役） | [docs/superpowers/specs/2026-08-31-weread-thoughts-like-comment-design.md](../superpowers/specs/2026-08-31-weread-thoughts-like-comment-design.md)         |
+| 实施清单     | [docs/superpowers/plans/2026-08-31-weread-thoughts-like-comment.md](../superpowers/plans/2026-08-31-weread-thoughts-like-comment.md)（历史步骤，勿当现役） |
 
 ## 1. 背景与问题
 
@@ -28,11 +28,11 @@
 
 ### 4.1 点热门划线
 
-沿用现有 Popover：作者、正文、可点的赞和数字。底部输入框写想法。列表条目不展示可见范围标签。
+沿用现有 Popover：标题「想法 · n」、作者、正文（相对头像缩进）、右下可点赞。点划线只出列表；点「写想法」后才出现输入框与官方可见范围。列表条目不展示可见范围标签。控件色跟 VS Code 主题（`button.background` 等），不用 antd 默认蓝。
 
 ### 4.2 选中正文
 
-选中非空文本后出现「写想法」。`range` 按与 `.xhtml-content` 相同的展示 HTML（strip / TXT 包 `<p>`，注入热门划线 span 之前）计算文本偏移，再映射回未 strip 原文下标，与官方热门划线同一套坐标；算不出则不发送。发送成功后走官方划线接口，正文显示这条划线。
+选中非空文本后出现「写想法」。`range` 按与 `.xhtml-content` 相同的展示 HTML（strip / TXT 包 `<p>`，注入热门划线 span 之前）计算文本偏移，再映射回未 strip 原文下标，与官方热门划线同一套坐标；算不出则不发送。官方划选写想法只打 `/web/review/add`（`type=1`，自带 `range`），**不**另打划线接口；正文划线由阅读器按官方三路 range 合并后画出。
 
 ### 4.3 可见范围
 
@@ -44,8 +44,8 @@
 
 ## 5. 非目标
 
-整本书评、改/删已有想法、只划线不写想法、列表可见范围徽章、新依赖。详见 spec。写想法会创建官方划线并在正文显示。
+整本书评、改/删已有想法、只划线不写想法、列表可见范围徽章、新依赖。详见设计文档。写想法走 `/web/review/add`，划线来自想法自带 `range`。
 
 ## 6. 验收标准
 
-见 `.tasks/weread-thoughts-like-comment/spec.md` 的 Acceptance Criteria。
+见设计文档「失败与验收」。插件点赞、发表后须在微信读书 App 能查到，行为与官方一致。

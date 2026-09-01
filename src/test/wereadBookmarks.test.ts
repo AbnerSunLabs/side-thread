@@ -5,6 +5,7 @@ import {
   ownBookmarkRangesForChapter,
   ownThoughtRangesForChapter,
   rangesOverlap,
+  reviewRangesForClickedUnderline,
 } from "../core/wereadBookmarks";
 
 describe("weread bookmarks", () => {
@@ -63,5 +64,14 @@ describe("weread bookmarks", () => {
       { range: "1-5", count: 12, type: 1 },
       { range: "10-20", count: 1, type: 1 },
     ]);
+  });
+
+  it("asks readReviews for the clicked range and overlapping hot ranges", () => {
+    const ranges = reviewRangesForClickedUnderline("5-8", [
+      { range: "3-10", count: 12, type: 1 },
+      { range: "5-8", count: 1, type: 1 },
+      { range: "20-30", count: 4, type: 1 },
+    ]);
+    assert.deepEqual(ranges, ["5-8", "3-10"]);
   });
 });

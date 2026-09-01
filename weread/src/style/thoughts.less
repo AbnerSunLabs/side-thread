@@ -1,0 +1,189 @@
+.thought-popover {
+  .ant-popover-inner {
+    padding: 12px;
+    border-radius: 8px;
+    background: var(--vscode-editor-background);
+  }
+}
+
+.thought-panel {
+  width: 268px;
+  max-width: 100%;
+}
+
+.thought-panel-meta {
+  font-size: 12px;
+  color: var(--vscode-descriptionForeground);
+  margin: 0 0 4px;
+}
+
+.thought-list {
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.thought-card {
+  padding: 12px 0;
+  // chat-requestBorder 在部分 webview 主题未注入，整条 border 会失效
+  border-bottom: 1px solid
+    var(
+      --vscode-widget-border,
+      var(--vscode-chat-requestBorder, rgba(128, 128, 128, 0.28))
+    );
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.thought-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.thought-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  flex: none;
+  object-fit: cover;
+  background: var(--vscode-button-background);
+}
+
+.thought-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--vscode-foreground);
+}
+
+.thought-body {
+  font-size: calc(var(--app-font-size) - 1px);
+  line-height: 1.5714;
+  color: var(--vscode-editor-foreground);
+  padding-left: 28px;
+}
+
+.thought-like-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+  padding-left: 28px;
+}
+
+.thought-like {
+  font: inherit;
+  font-size: 12px;
+  line-height: 1;
+  border: none;
+  background: none;
+  padding: 0 4px;
+  height: 22px;
+  cursor: pointer;
+  color: var(--vscode-descriptionForeground);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 6px;
+
+  &:hover:not(:disabled) {
+    color: var(--vscode-editor-foreground);
+    background: var(--vscode-toolbar-hoverBackground);
+  }
+
+  &.is-liked {
+    color: var(--vscode-editor-foreground);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+}
+
+.thought-empty {
+  padding: 24px 8px;
+  text-align: center;
+  color: var(--vscode-descriptionForeground);
+  font-size: 14px;
+  margin: 0;
+}
+
+.thought-compose-slot {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid
+    var(
+      --vscode-widget-border,
+      var(--vscode-chat-requestBorder, rgba(128, 128, 128, 0.28))
+    );
+}
+
+.thought-composer {
+  .ant-input {
+    background: var(--vscode-input-background);
+    color: var(--vscode-input-foreground);
+    border-color: var(--vscode-input-border, var(--vscode-widget-border));
+
+    &:hover,
+    &:focus {
+      border-color: var(--vscode-button-background);
+    }
+
+    &:focus {
+      box-shadow: 0 0 0 1px var(--vscode-button-background);
+    }
+  }
+
+  .ant-select-selector {
+    background: var(--vscode-dropdown-background) !important;
+    color: var(--vscode-dropdown-foreground);
+    border-color: var(--vscode-widget-border) !important;
+  }
+
+  .ant-select:hover .ant-select-selector,
+  .ant-select-focused .ant-select-selector {
+    border-color: var(--vscode-button-background) !important;
+  }
+
+  .ant-select-focused .ant-select-selector {
+    box-shadow: 0 0 0 1px var(--vscode-button-background) !important;
+  }
+}
+
+.thought-select-dropdown {
+  background: var(--vscode-dropdown-background) !important;
+  color: var(--vscode-dropdown-foreground);
+
+  .ant-select-item {
+    color: var(--vscode-dropdown-foreground);
+  }
+
+  .ant-select-item-option-active {
+    background: var(--vscode-list-hoverBackground) !important;
+  }
+
+  .ant-select-item-option-selected {
+    background: var(--vscode-button-background) !important;
+    color: var(--vscode-button-foreground) !important;
+    font-weight: 600;
+  }
+}
+
+.thought-composer-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.thought-composer-vis {
+  font-size: 14px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.thought-composer-send {
+  margin-left: auto;
+}

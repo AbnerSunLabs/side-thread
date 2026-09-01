@@ -23,7 +23,7 @@ https://open-vsx.org/extension/ylw/side-thread
 
 ## ✨ 核心功能
 
-- **微信读书**: 书架同步、阅读进度云同步、**阅读时长同步到微信读书账号**、章节目录、划线与热门想法、自定义字体。同一章不翻页也会记时长；累计满约 60 秒会上报一次，切章、回书架、挂机约 3 分钟会把余量报出；切走侧栏只暂停，余量回来再继续。机制与上报节点见 [docs/weread-reading-time.md](docs/weread-reading-time.md)。
+- **微信读书**: 书架同步、阅读进度云同步、**阅读时长同步到微信读书账号**、章节目录、划线与热门想法（可点赞；选中正文或点划线后「写想法」，可见范围走官方四档，默认屏蔽好友）、自定义字体。同一章不翻页也会记时长；累计满约 60 秒会上报一次，切章、回书架、挂机约 3 分钟会把余量报出；切走侧栏只暂停，余量回来再继续。机制与上报节点见 [docs/weread-reading-time.md](docs/weread-reading-time.md)。划线想法的接口与交互见 [docs/superpowers/specs/2026-08-31-weread-thoughts-like-comment-design.md](docs/superpowers/specs/2026-08-31-weread-thoughts-like-comment-design.md)。
 - **小宇宙播客**: 发现页、订阅列表、收件箱、节目/单集详情、订阅/取消订阅、播放进度同步、Shownotes、状态栏字幕。
 - **主题适配**: 界面跟随编辑器亮色/暗色主题。
 - **开关**: `sidethread.enableWeread` / `sidethread.enableXiaoyuzhou` 可分别关闭模块。

@@ -28,6 +28,7 @@
     "../src/core/wereadHtmlRange.ts",
     "../src/core/wereadBookmarks.ts",
     "../src/core/wereadUnderlineInject.ts",
-    "../src/core/wereadOverlayPos.ts"
+    "../src/core/wereadOverlayPos.ts",
+    "../src/core/wereadCatalog.ts"
   ]
 }

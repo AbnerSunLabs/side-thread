@@ -96,3 +96,22 @@ export function mergeUnderlineRanges(
   }
   return extra.length ? [...hot, ...extra] : hot;
 }
+
+/** 点划线拉想法：自己的 range 可能和热门 range 不完全相同，要一起问 readReviews */
+export function reviewRangesForClickedUnderline(
+  clicked: string,
+  underlines: UnderlineLike[],
+): string[] {
+  const seen = new Set<string>();
+  const ranges: string[] = [];
+  const add = (range: string) => {
+    if (!isUnderlineRange(range) || seen.has(range)) return;
+    seen.add(range);
+    ranges.push(range);
+  };
+  add(clicked);
+  for (const item of underlines) {
+    if (rangesOverlap(item.range, clicked)) add(item.range);
+  }
+  return ranges;
+}

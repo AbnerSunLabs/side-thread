@@ -410,13 +410,16 @@ export async function web_book_chapter_e(
 export async function web_book_readReviews(
   bookId: string,
   chapterUid: number,
-  range: string,
+  range: string | string[],
   cookie = ""
 ) {
+  const ranges = (Array.isArray(range) ? range : [range]).filter(
+    (item, index, list) => item && list.indexOf(item) === index,
+  );
   const payload = {
     bookId,
     chapterUid,
-    reviews: [{ range, maxIdx: 0, count: 30, synckey: 0 }]
+    reviews: ranges.map(item => ({ range: item, maxIdx: 0, count: 30, synckey: 0 }))
   };
   const resp = await postJSON("https://weread.qq.com/web/book/readReviews", payload, { cookie });
   return resp.json();

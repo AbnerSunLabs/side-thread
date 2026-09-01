@@ -283,14 +283,17 @@ export class WereadProvider extends BaseWebviewProvider {
         }
 
         case "WEREAD_GET_BEST_THOUGHTS": {
-          const { bookId, chapterUid, range } = payload;
+          const { bookId, chapterUid, range, ranges } = payload;
+          const reviewRanges = Array.isArray(ranges) && ranges.length > 0
+            ? ranges
+            : range;
           // 官方 handleClickRange：自己的想法先上，再拼热门 pageReviews
           const [result, mine] = await Promise.all([
             this.client.execute(
               web_book_readReviews,
               bookId,
               chapterUid,
-              range,
+              reviewRanges,
             ),
             this.client
               .execute(web_review_list_mine_notes, bookId)
@@ -305,6 +308,9 @@ export class WereadProvider extends BaseWebviewProvider {
           this.wereadLog("info", "划线想法已合并", {
             chapterUid,
             range,
+            reviewRanges: Array.isArray(reviewRanges)
+              ? reviewRanges
+              : [reviewRanges],
             own: own.length,
             hot: hot.length,
             merged: thoughts.length,

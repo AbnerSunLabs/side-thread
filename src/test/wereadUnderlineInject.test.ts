@@ -73,6 +73,17 @@ describe("weread underline inject", () => {
     assert.ok(out.includes('data-range="6-13"'));
   });
 
+  it("keeps the wider hot range when an own thought range is nested", () => {
+    const html = "<p>abcdefghij</p>";
+    const out = injectUnderlines(html, [
+      { range: "3-10", count: 12, type: 1 },
+      { range: "5-8", count: 1, type: 1 },
+    ]);
+    assert.equal(plainText(out), "abcdefghij");
+    assert.equal(out.match(/class="hot-underline"/g)?.length, 1);
+    assert.ok(out.includes('data-range="3-10"'));
+  });
+
   it("ignores malformed ranges", () => {
     const html = "<p>abc</p>";
     assert.equal(injectUnderlines(html, [{ range: "x-y", count: 1, type: 1 }]), html);

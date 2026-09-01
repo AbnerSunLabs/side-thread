@@ -28,7 +28,7 @@ import {
   parseThoughtRequestId,
   ThoughtVisibility,
 } from "core-weread/wereadThoughts";
-import { mergeUnderlineRanges, sameChapterUid } from "core-weread/wereadBookmarks";
+import { mergeUnderlineRanges, reviewRangesForClickedUnderline, sameChapterUid } from "core-weread/wereadBookmarks";
 import {
   displayedThoughtHtml,
   prepareThoughtRangeHtml,
@@ -37,24 +37,24 @@ import {
 } from "core-weread/wereadHtmlRange";
 import { injectUnderlines } from "core-weread/wereadUnderlineInject";
 import { overlayPosInScroller } from "core-weread/wereadOverlayPos";
+import {
+  CatalogChapter,
+  CatalogTocRow,
+  flattenCatalogToc,
+  parseCatalogChapters,
+} from "core-weread/wereadCatalog";
 import { ThoughtComposer } from "./components/ThoughtComposer";
 import { vscode } from "./utils/vscode";
 import { useReadSession } from "./hooks/useReadSession";
 import { useFontSizeStore } from "./store/fontSize";
 import "./style/App.less";
+import "./style/thoughts.less";
 
 interface Book {
   bookId: string;
   title: string;
   cover: string;
   readUpdateTime?: number;
-}
-
-interface Chapter {
-  chapterUid: number;
-  chapterIdx?: number | string;
-  title: string;
-  level: number;
 }
 
 interface ChapterContent {
@@ -229,7 +229,7 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [books, setBooks] = useState<Book[]>([]);
   const [currentBook, setCurrentBook] = useState<Book | null>(null);
-  const [catalog, setCatalog] = useState<Chapter[]>([]);
+  const [catalog, setCatalog] = useState<CatalogChapter[]>([]);
   const [currentChapterIdx, setCurrentChapterIdx] = useState(0);
   const [chapterContent, setChapterContent] = useState<ChapterContent | null>(
     null,
@@ -279,7 +279,7 @@ const App: React.FC = () => {
     });
   }, [books]);
 
-  const catalogRef = useRef<Chapter[]>([]);
+  const catalogRef = useRef<CatalogChapter[]>([]);
   const currentBookRef = useRef<Book | null>(null);
   const currentChapterUidRef = useRef<number | null>(null);
   const pendingUidRef = useRef<number | null>(null);
@@ -293,6 +293,7 @@ const App: React.FC = () => {
   const thoughtRequestIdRef = useRef(0);
   const likeInFlightRef = useRef(false);
   const currentRangeRef = useRef("");
+  const underlinesRef = useRef<Underline[]>([]);
   const bestThoughtsVisibleRef = useRef(false);
   const selectionOffsetsRef = useRef<{
     start: number;
@@ -306,6 +307,10 @@ const App: React.FC = () => {
     chapterUid: number;
     source: "underline" | "selection";
     requestId: number;
+  } | null>(null);
+  const pendingTocScrollRef = useRef<{
+    title: string;
+    anchor?: string;
   } | null>(null);
 
   useEffect(() => {
@@ -332,6 +337,10 @@ const App: React.FC = () => {
   useEffect(() => {
     bestThoughtsVisibleRef.current = bestThoughtsVisible;
   }, [bestThoughtsVisible]);
+
+  useEffect(() => {
+    underlinesRef.current = underlines;
+  }, [underlines]);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -367,6 +376,16 @@ const App: React.FC = () => {
           break;
         }
         case "WEREAD_BEST_THOUGHTS_DATA": {
+          const incomingRange =
+            payload && typeof payload === "object"
+              ? (payload as { range?: unknown }).range
+              : undefined;
+          if (
+            typeof incomingRange === "string" &&
+            incomingRange !== currentRangeRef.current
+          ) {
+            break;
+          }
           const formatted = Array.isArray(payload?.thoughts)
             ? payload.thoughts
             : parseHotThoughts(payload);
@@ -376,53 +395,46 @@ const App: React.FC = () => {
           break;
         }
         case "WEREAD_CATALOG_DATA": {
-          if (payload && payload.data && payload.data[0]) {
-            const chapters =
-              payload.data[0].updated || payload.data[0].chapters || [];
+          const chapters = parseCatalogChapters(payload);
+          if (chapters.length) {
             console.log(
               "[Weread] Catalog received:",
               chapters.length,
               "chapters",
             );
             setCatalog(chapters);
+            const bookId = (payload as { data?: Array<{ bookId?: string }> })
+              ?.data?.[0]?.bookId;
+            if (!bookId) {
+              break;
+            }
 
-            // 如果没进度或进度匹配失败
-            if (chapters.length > 0) {
-              const pUid = pendingUidRef.current;
-              const idx =
-                pUid !== null
-                  ? chapters.findIndex(
-                      (c: any) => String(c.chapterUid) === String(pUid),
-                    )
-                  : -1;
+            const pUid = pendingUidRef.current;
+            const idx =
+              pUid !== null
+                ? chapters.findIndex(
+                    c => String(c.chapterUid) === String(pUid),
+                  )
+                : -1;
 
-              if (pUid !== null && idx !== -1) {
-                console.log(
-                  "[Weread] Catalog arrived, matching pending progress:",
-                  pUid,
-                  "found idx:",
-                  idx,
-                );
-                loadChapterWithBookId(
-                  payload.data[0].bookId,
-                  idx,
-                  chapters,
-                );
-                pendingUidRef.current = null;
-              } else if (!hasReceivedProgressRef.current) {
-                console.log(
-                  "[Weread] Catalog arrived but progress pending, waiting for progress data...",
-                );
-              } else {
-                console.log(
-                  "[Weread] Loading first chapter (no progress match or really no progress)",
-                );
-                loadChapterWithBookId(
-                  payload.data[0].bookId,
-                  0,
-                  chapters,
-                );
-              }
+            if (pUid !== null && idx !== -1) {
+              console.log(
+                "[Weread] Catalog arrived, matching pending progress:",
+                pUid,
+                "found idx:",
+                idx,
+              );
+              loadChapterWithBookId(bookId, idx, chapters);
+              pendingUidRef.current = null;
+            } else if (!hasReceivedProgressRef.current) {
+              console.log(
+                "[Weread] Catalog arrived but progress pending, waiting for progress data...",
+              );
+            } else {
+              console.log(
+                "[Weread] Loading first chapter (no progress match or really no progress)",
+              );
+              loadChapterWithBookId(bookId, 0, chapters);
             }
           }
           break;
@@ -536,11 +548,28 @@ const App: React.FC = () => {
           if (pending.range !== currentRangeRef.current) {
             break;
           }
+          const added = thoughtFromAddResult(payload, pending);
           setBestThoughts(list => [
-            thoughtFromAddResult(payload, pending),
-            ...list,
+            added,
+            ...list.filter(item => item.reviewId !== added.reviewId),
           ]);
           setComposerEpoch(n => n + 1);
+          const book = currentBookRef.current;
+          const chapterUid = currentChapterUidRef.current;
+          if (book && chapterUid != null) {
+            vscode.postMessage({
+              command: "WEREAD_GET_BEST_THOUGHTS",
+              payload: {
+                bookId: book.bookId,
+                chapterUid,
+                range: pending.range,
+                ranges: reviewRangesForClickedUnderline(
+                  pending.range,
+                  underlinesRef.current,
+                ),
+              },
+            });
+          }
           break;
         }
         case "WEREAD_ERROR": {
@@ -628,7 +657,7 @@ const App: React.FC = () => {
   const loadChapterWithBookId = (
     bookId: string,
     idx: number,
-    chapters: Chapter[],
+    chapters: CatalogChapter[],
   ) => {
     setLoading(true);
     setCurrentChapterIdx(idx);
@@ -705,6 +734,7 @@ const App: React.FC = () => {
             bookId: currentBook.bookId,
             chapterUid: catalog[currentChapterIdx].chapterUid,
             range,
+            ranges: reviewRangesForClickedUnderline(range, underlines),
           },
         });
       }
@@ -889,6 +919,7 @@ const App: React.FC = () => {
     setSelectionRange("");
     selectionOffsetsRef.current = null;
     currentChapterUidRef.current = null;
+    pendingTocScrollRef.current = null;
   };
 
   const handleRefresh = () => {
@@ -898,6 +929,46 @@ const App: React.FC = () => {
     } else if (currentBook && catalog[currentChapterIdx]) {
       loadChapter(currentChapterIdx);
     }
+  };
+
+  const applyPendingTocScroll = () => {
+    const target = pendingTocScrollRef.current;
+    const scroller = readerContentRef.current;
+    if (!target || !scroller) return;
+    const root = scroller.querySelector(".xhtml-content");
+    if (!(root instanceof HTMLElement)) return;
+    let el: Element | null = null;
+    if (target.anchor) {
+      el =
+        document.getElementById(target.anchor) ||
+        root.querySelector(`[name="${target.anchor}"]`);
+    }
+    if (!el) {
+      const headings = root.querySelectorAll("h1, h2, h3, h4, h5, h6");
+      for (const node of headings) {
+        if (node.textContent?.trim() === target.title) {
+          el = node;
+          break;
+        }
+      }
+    }
+    if (el instanceof HTMLElement) {
+      el.scrollIntoView({ block: "start" });
+      pendingTocScrollRef.current = null;
+    }
+  };
+
+  const openTocRow = (row: CatalogTocRow) => {
+    setCatalogVisible(false);
+    pendingTocScrollRef.current =
+      row.kind === "anchor"
+        ? { title: row.title, anchor: row.anchor }
+        : null;
+    if (row.chapterIndex === currentChapterIdx) {
+      requestAnimationFrame(() => applyPendingTocScroll());
+      return;
+    }
+    loadChapter(row.chapterIndex);
   };
 
   const cleanedHtml = useMemo(() => {
@@ -945,6 +1016,11 @@ const App: React.FC = () => {
       setPopoverPos(posUnderAnchor(scroller, el));
     }
   }, [bestThoughtsVisible, currentRange, cleanedHtml]);
+
+  useEffect(() => {
+    if (loading || !chapterContent) return;
+    applyPendingTocScroll();
+  }, [loading, chapterContent, cleanedHtml]);
 
   useReadSession({
     enabled: view === "reader" && !loading && !!chapterContent,
@@ -1045,6 +1121,7 @@ const App: React.FC = () => {
             )}
             <Popover
               open={bestThoughtsVisible}
+              overlayClassName="thought-popover"
               onOpenChange={visible => {
                 if (!visible) {
                   setBestThoughtsVisible(false);
@@ -1060,125 +1137,78 @@ const App: React.FC = () => {
               }
               content={
                 <div
-                  style={{
-                    maxWidth: "300px",
-                    minWidth: "150px",
-                  }}
+                  className="thought-panel"
+                  onClick={e => e.stopPropagation()}
                 >
-                  {bestThoughtsLoading ? (
-                    <div style={{ padding: "20px", textAlign: "center" }}>
-                      <Spin size="small" />
-                    </div>
-                  ) : (
-                    <>
-                      <div
-                        style={{
-                          maxHeight: "400px",
-                          overflowY: "auto",
-                        }}
-                      >
-                        {bestThoughts.length > 0 ? (
-                          bestThoughts.map(thought => (
-                            <div
-                              key={thought.reviewId}
-                              style={{
-                                marginBottom: "12px",
-                                padding: "8px",
-                                borderBottom:
-                                  "1px solid var(--vscode-chat-requestBorder)",
-                              }}
-                            >
-                              <div
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: "8px",
-                                  marginBottom: "8px",
-                                }}
-                              >
-                                <img
-                                  src={thought.user.avatar}
-                                  style={{
-                                    width: "20px",
-                                    height: "20px",
-                                    borderRadius: "50%",
-                                  }}
-                                />
-                                <span
-                                  style={{
-                                    fontSize:
-                                      "calc(var(--app-font-size) - 1px)",
-                                    fontWeight: 600,
-                                  }}
-                                >
-                                  {thought.user.name}
-                                </span>
-                              </div>
-                              <div
-                                style={{
-                                  fontSize: "calc(var(--app-font-size) - 1px)",
-                                  color: "var(--vscode-editor-foreground)",
-                                  marginBottom: "4px",
-                                }}
-                              >
-                                {thought.content}
-                              </div>
-                              <button
-                                type="button"
-                                disabled={likingId === thought.reviewId}
-                                onClick={() => handleLikeThought(thought)}
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: "4px",
-                                  color: thought.liked
-                                    ? "var(--vscode-textLink-foreground, #1890ff)"
-                                    : "var(--vscode-descriptionForeground)",
-                                  fontSize: "11px",
-                                  cursor:
-                                    likingId === thought.reviewId
-                                      ? "not-allowed"
-                                      : "pointer",
-                                  opacity:
-                                    likingId === thought.reviewId ? 0.5 : 1,
-                                  background: "none",
-                                  border: "none",
-                                  padding: 0,
-                                }}
-                              >
-                                {thought.liked ? (
-                                  <LikeFilled />
-                                ) : (
-                                  <LikeOutlined />
-                                )}{" "}
-                                {thought.likeCount}
-                              </button>
-                            </div>
-                          ))
-                        ) : (
-                          <Empty
-                            description="暂无想法"
-                            image={Empty.PRESENTED_IMAGE_SIMPLE}
-                          />
-                        )}
+                    {bestThoughtsLoading ? (
+                      <div style={{ padding: "20px", textAlign: "center" }}>
+                        <Spin size="small" />
                       </div>
-                      {underlineComposerOpen ? (
-                        <ThoughtComposer
-                          key={`${currentRange}-${composerEpoch}`}
-                          submitting={thoughtSubmitting}
-                          onSubmit={handleSubmitThought}
-                        />
-                      ) : (
-                        <Button
-                          size="small"
-                          style={{ marginTop: 8 }}
-                          onClick={() => setUnderlineComposerOpen(true)}
-                        >
-                          写想法
-                        </Button>
-                      )}
-                    </>
-                  )}
+                    ) : (
+                      <>
+                        <p className="thought-panel-meta">
+                          想法 · {bestThoughts.length}
+                        </p>
+                        <div className="thought-list">
+                          {bestThoughts.length > 0 ? (
+                            bestThoughts.map(thought => (
+                              <article
+                                key={thought.reviewId}
+                                className="thought-card"
+                              >
+                                <div className="thought-head">
+                                  <img
+                                    className="thought-avatar"
+                                    src={thought.user.avatar}
+                                    alt=""
+                                  />
+                                  <span className="thought-name">
+                                    {thought.user.name}
+                                  </span>
+                                </div>
+                                <div className="thought-body">
+                                  {thought.content}
+                                </div>
+                                <div className="thought-like-row">
+                                  <button
+                                    type="button"
+                                    className={`thought-like${thought.liked ? " is-liked" : ""}`}
+                                    aria-pressed={thought.liked}
+                                    disabled={likingId === thought.reviewId}
+                                    onClick={() => handleLikeThought(thought)}
+                                  >
+                                    {thought.liked ? (
+                                      <LikeFilled />
+                                    ) : (
+                                      <LikeOutlined />
+                                    )}{" "}
+                                    {thought.likeCount}
+                                  </button>
+                                </div>
+                              </article>
+                            ))
+                          ) : (
+                            <p className="thought-empty">暂无想法</p>
+                          )}
+                        </div>
+                        <div className="thought-compose-slot">
+                          {underlineComposerOpen ? (
+                            <ThoughtComposer
+                              key={`${currentRange}-${composerEpoch}`}
+                              submitting={thoughtSubmitting}
+                              onSubmit={handleSubmitThought}
+                            />
+                          ) : (
+                            <Button
+                              size="small"
+                              onClick={() => setUnderlineComposerOpen(true)}
+                            >
+                              写想法
+                            </Button>
+                          )}
+                        </div>
+                      </>
+                    )}
                 </div>
               }
             >
@@ -1206,14 +1236,18 @@ const App: React.FC = () => {
         styles={{ body: { padding: 0 } }}
       >
         <div className="catalog-list">
-          {catalog.map((chapter, index) => (
+          {flattenCatalogToc(catalog).map((row, rowIndex) => (
             <div
-              key={chapter.chapterUid}
-              id={`chapter-${index}`}
-              className={`catalog-item ${currentChapterIdx === index ? "active" : ""} level-${chapter.level}`}
-              onClick={() => loadChapter(index)}
+              key={`${row.kind}-${row.chapterUid}-${rowIndex}-${row.title}`}
+              id={
+                row.kind === "chapter"
+                  ? `chapter-${row.chapterIndex}`
+                  : undefined
+              }
+              className={`catalog-item ${currentChapterIdx === row.chapterIndex && row.kind === "chapter" ? "active" : ""} level-${row.level}`}
+              onClick={() => openTocRow(row)}
             >
-              {chapter.title}
+              {row.title}
             </div>
           ))}
         </div>
@@ -1260,6 +1294,7 @@ const App: React.FC = () => {
       {selectionPos && (
         <Popover
           open={selectionComposerOpen}
+          overlayClassName="thought-popover"
           onOpenChange={visible => {
             if (!visible) {
               setSelectionComposerOpen(false);
@@ -1269,12 +1304,7 @@ const App: React.FC = () => {
           placement="bottomLeft"
           content={
             selectionRange ? (
-              <div
-                style={{
-                  maxWidth: "300px",
-                  minWidth: "150px",
-                }}
-              >
+              <div className="thought-panel">
                 <ThoughtComposer
                   key={`${selectionRange}-${selectionEpoch}`}
                   submitting={thoughtSubmitting}
