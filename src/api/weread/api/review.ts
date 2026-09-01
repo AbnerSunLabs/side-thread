@@ -40,7 +40,7 @@ export enum ReviewAccessibility {
     Public,
 
     /**
-     * 屏蔽好友（官方 friendNotSee）
+     * 屏蔽好友（官方 notVisibleToFriends）
      */
     HideFromFriends,
 }
@@ -126,6 +126,23 @@ export async function web_review_list_myself(bookId: string, startIdx = 0, count
         count: count,
         listMode: 2,
         synckey: synckey,
+    }, {cookie})
+    return resp.json()
+}
+
+/**
+ * 同步「我的想法」（官方 syncUserThoughts）
+ * @description 官方阅读器发想法成功后调用它刷新划线；带 range 的想法本身就是一条划线
+ * @param bookId
+ * @param cookie
+ */
+export async function web_review_list_mine_notes(bookId: string, cookie = "") {
+    const resp = await get("https://weread.qq.com/web/review/list", {
+        bookId: bookId,
+        listType: 11, // ReviewListTypeNote
+        listMode: 2,
+        mine: 1,
+        synckey: 0,
     }, {cookie})
     return resp.json()
 }

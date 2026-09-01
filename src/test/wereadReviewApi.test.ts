@@ -34,7 +34,8 @@ describe("weread review write payloads", () => {
     assert.equal(body.range, "3-8");
     assert.equal(body.abstract, "hello");
     assert.equal(body.content, "想法");
-    assert.equal(body.friendNotSee, 1);
+    assert.equal(body.notVisibleToFriends, 1);
+    assert.equal(body.friendNotSee, undefined);
     assert.equal(body.isPrivate, undefined);
   });
 });

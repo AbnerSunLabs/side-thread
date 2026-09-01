@@ -24,17 +24,18 @@ import {
 import {
   applyLikeToggle,
   isMatchingThoughtRequest,
-  parseThoughtLikeCount,
-  parseThoughtLiked,
+  parseHotThoughts,
   parseThoughtRequestId,
   ThoughtVisibility,
 } from "core-weread/wereadThoughts";
+import { mergeUnderlineRanges, sameChapterUid } from "core-weread/wereadBookmarks";
 import {
   displayedThoughtHtml,
   prepareThoughtRangeHtml,
   resolveDisplayedThoughtRange,
   stripChapterWrappers,
 } from "core-weread/wereadHtmlRange";
+import { injectUnderlines } from "core-weread/wereadUnderlineInject";
 import { ThoughtComposer } from "./components/ThoughtComposer";
 import { vscode } from "./utils/vscode";
 import { useReadSession } from "./hooks/useReadSession";
@@ -200,54 +201,6 @@ function resolveChapterThoughtRange(
   );
 }
 
-/** 判断下标是否落在 HTML 标签内部（含属性） */
-function isInsideHtmlTag(html: string, index: number): boolean {
-  const lastOpen = html.lastIndexOf("<", index);
-  const lastClose = html.lastIndexOf(">", index);
-  return lastOpen > lastClose;
-}
-
-/**
- * 仅允许把划线包在纯文本片段上。
- * range 若切到标签中间或跨越标签，插入 span 会破坏 DOM，经 DOMParser 后表现为正文被截断。
- */
-function canInjectUnderlineRange(
-  html: string,
-  start: number,
-  end: number,
-): boolean {
-  if (start < 0 || end > html.length || start >= end) return false;
-  if (isInsideHtmlTag(html, start) || isInsideHtmlTag(html, end - 1)) {
-    return false;
-  }
-  const middle = html.slice(start, end);
-  return !/[<>]/.test(middle);
-}
-
-function injectUnderlines(rawHtml: string, underlines: Underline[]): string {
-  if (!underlines.length) return rawHtml;
-
-  const sorted = [...underlines].sort((a, b) => {
-    const startA = parseInt(a.range.split("-")[0], 10);
-    const startB = parseInt(b.range.split("-")[0], 10);
-    return startB - startA;
-  });
-
-  let result = rawHtml;
-  sorted.forEach((u) => {
-    const [start, end] = u.range.split("-").map(Number);
-    if (isNaN(start) || isNaN(end)) return;
-    if (!canInjectUnderlineRange(result, start, end)) return;
-
-    const before = result.slice(0, start);
-    const middle = result.slice(start, end);
-    const after = result.slice(end);
-    result = `${before}<span class="hot-underline" data-range="${u.range}">${middle}</span>${after}`;
-  });
-
-  return result;
-}
-
 const App: React.FC = () => {
   const [groupOpen, setGroupOpen] = useState(false);
   const groupRef = useRef<HTMLDivElement>(null);
@@ -270,6 +223,7 @@ const App: React.FC = () => {
   const [thoughtSubmitting, setThoughtSubmitting] = useState(false);
   const [currentRange, setCurrentRange] = useState("");
   const [composerEpoch, setComposerEpoch] = useState(0);
+  const [underlineComposerOpen, setUnderlineComposerOpen] = useState(false);
   const [underlineAbstract, setUnderlineAbstract] = useState("");
   const [popoverPos, setPopoverPos] = useState<{
     top: number;
@@ -328,6 +282,7 @@ const App: React.FC = () => {
     content: string;
     abstract: string;
     range: string;
+    chapterUid: number;
     source: "underline" | "selection";
     requestId: number;
   } | null>(null);
@@ -391,20 +346,9 @@ const App: React.FC = () => {
           break;
         }
         case "WEREAD_BEST_THOUGHTS_DATA": {
-          const reviews = payload.reviews || [];
-          const formatted = reviews.flatMap((r: any) =>
-            (r.pageReviews || []).map((pr: any) => ({
-              reviewId: pr.review.reviewId,
-              abstract: pr.review.abstract,
-              content: pr.review.content,
-              user: {
-                name: pr.review.author.name,
-                avatar: pr.review.author.avatar,
-              },
-              liked: parseThoughtLiked(pr),
-              likeCount: parseThoughtLikeCount(pr),
-            })),
-          );
+          const formatted = Array.isArray(payload?.thoughts)
+            ? payload.thoughts
+            : parseHotThoughts(payload);
           setBestThoughts(formatted);
           setBestThoughtsLoading(false);
           setBestThoughtsVisible(true);
@@ -540,8 +484,12 @@ const App: React.FC = () => {
           pendingAddRef.current = null;
           thoughtSubmittingRef.current = false;
           setThoughtSubmitting(false);
+          setUnderlineComposerOpen(false);
           if (!pending) {
             break;
+          }
+          if (sameChapterUid(pending.chapterUid, currentChapterUidRef.current)) {
+            setUnderlines(list => mergeUnderlineRanges(list, [pending.range]));
           }
           if (pending.source === "selection") {
             message.success("想法已发布");
@@ -667,6 +615,7 @@ const App: React.FC = () => {
     setUnderlines([]);
     setBestThoughts([]);
     setBestThoughtsVisible(false);
+    setUnderlineComposerOpen(false);
     setSelectionPos(null);
     setSelectionComposerOpen(false);
     setSelectionRange("");
@@ -720,6 +669,7 @@ const App: React.FC = () => {
       });
       setBestThoughtsLoading(true);
       setBestThoughtsVisible(true);
+      setUnderlineComposerOpen(false);
       setBestThoughts([]);
       setLikingId(null);
       likeRollbackRef.current = null;
@@ -776,6 +726,7 @@ const App: React.FC = () => {
       content,
       abstract,
       range: currentRange,
+      chapterUid: catalog[currentChapterIdx].chapterUid,
       source: "underline",
       requestId,
     };
@@ -839,6 +790,7 @@ const App: React.FC = () => {
       content,
       abstract,
       range,
+      chapterUid: catalog[currentChapterIdx].chapterUid,
       source: "selection",
       requestId,
     };
@@ -911,6 +863,7 @@ const App: React.FC = () => {
     setUnderlines([]);
     setBestThoughts([]);
     setBestThoughtsVisible(false);
+    setUnderlineComposerOpen(false);
     setSelectionPos(null);
     setSelectionComposerOpen(false);
     setSelectionRange("");
@@ -1088,6 +1041,7 @@ const App: React.FC = () => {
         onOpenChange={(visible) => {
           if (!visible) {
             setBestThoughtsVisible(false);
+            setUnderlineComposerOpen(false);
             setPopoverPos(null);
           }
         }}
@@ -1186,16 +1140,26 @@ const App: React.FC = () => {
                     ))
                   ) : (
                     <Empty
-                      description="暂无热门想法"
+                      description="暂无想法"
                       image={Empty.PRESENTED_IMAGE_SIMPLE}
                     />
                   )}
                 </div>
-                <ThoughtComposer
-                  key={`${currentRange}-${composerEpoch}`}
-                  submitting={thoughtSubmitting}
-                  onSubmit={handleSubmitThought}
-                />
+                {underlineComposerOpen ? (
+                  <ThoughtComposer
+                    key={`${currentRange}-${composerEpoch}`}
+                    submitting={thoughtSubmitting}
+                    onSubmit={handleSubmitThought}
+                  />
+                ) : (
+                  <Button
+                    size="small"
+                    style={{ marginTop: 8 }}
+                    onClick={() => setUnderlineComposerOpen(true)}
+                  >
+                    写想法
+                  </Button>
+                )}
               </>
             )}
           </div>

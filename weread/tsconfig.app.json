@@ -22,5 +22,5 @@
       "core-weread/*": ["../src/core/*"]
     }
   },
-  "include": ["src", "../src/core/wereadThoughts.ts", "../src/core/wereadHtmlRange.ts"]
+  "include": ["src", "../src/core/wereadThoughts.ts", "../src/core/wereadHtmlRange.ts", "../src/core/wereadBookmarks.ts", "../src/core/wereadUnderlineInject.ts"]
 }

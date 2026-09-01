@@ -8,17 +8,27 @@ import {
   web_book_getProgress,
   web_book_read_init,
   web_book_read,
+  web_book_bookmarklist,
   web_book_underlines,
   web_book_readReviews,
 } from "../api/weread/api/book";
 import {
   web_review_add_thought,
   web_review_like,
+  web_review_list_mine_notes,
 } from "../api/weread/api/review";
 import { setConfigByKey } from "../core/config";
 import {
+  mergeUnderlineRanges,
+  ownBookmarkRangesForChapter,
+  ownThoughtRangesForChapter,
+} from "../core/wereadBookmarks";
+import {
   assertAddThoughtPayload,
   assertLikeThoughtPayload,
+  mergeRangeThoughts,
+  ownThoughtsMatchingRange,
+  parseHotThoughts,
   parseThoughtRequestId,
 } from "../core/wereadThoughts";
 import { WereadLogFn, WereadReadReporter } from "../api/weread/readSession";
@@ -226,30 +236,82 @@ export class WereadProvider extends BaseWebviewProvider {
 
         case "WEREAD_GET_UNDERLINES": {
           const { bookId, chapterUid } = payload;
-          const result = await this.client.execute(
-            web_book_underlines,
-            bookId,
+          // 官方阅读器的「我的划线」= 划线(bookmarklist) + 带 range 的我的想法
+          const [result, ownBookmarks, ownThoughts] = await Promise.all([
+            this.client.execute(web_book_underlines, bookId, chapterUid),
+            this.client
+              .execute(web_book_bookmarklist, bookId)
+              .then(bookmarks =>
+                ownBookmarkRangesForChapter(bookmarks, chapterUid),
+              )
+              .catch(error => {
+                this.wereadLog("warn", "拉取我的划线失败，仅展示热门划线", error);
+                return [] as string[];
+              }),
+            this.client
+              .execute(web_review_list_mine_notes, bookId)
+              .then(reviews => ownThoughtRangesForChapter(reviews, chapterUid))
+              .catch(error => {
+                this.wereadLog("warn", "拉取我的想法失败，划线可能不全", error);
+                return [] as string[];
+              }),
+          ]);
+          const hot = Array.isArray(result?.underlines)
+            ? result.underlines
+            : [];
+          const merged = mergeUnderlineRanges(hot, [
+            ...ownBookmarks,
+            ...ownThoughts,
+          ]);
+          this.wereadLog("info", "章节划线已合并", {
             chapterUid,
-          );
+            hot: hot.length,
+            ownBookmarks: ownBookmarks.length,
+            ownThoughts: ownThoughts.length,
+            merged: merged.length,
+          });
           webviewView.webview.postMessage({
             command: "WEREAD_UNDERLINES_DATA",
             // 带回请求时的 chapterUid，便于前端丢弃过期响应
-            payload: { ...result, chapterUid },
+            payload: {
+              ...result,
+              underlines: merged,
+              chapterUid,
+            },
           });
           break;
         }
 
         case "WEREAD_GET_BEST_THOUGHTS": {
           const { bookId, chapterUid, range } = payload;
-          const result = await this.client.execute(
-            web_book_readReviews,
-            bookId,
+          // 官方 handleClickRange：自己的想法先上，再拼热门 pageReviews
+          const [result, mine] = await Promise.all([
+            this.client.execute(
+              web_book_readReviews,
+              bookId,
+              chapterUid,
+              range,
+            ),
+            this.client
+              .execute(web_review_list_mine_notes, bookId)
+              .catch(error => {
+                this.wereadLog("warn", "拉取我的想法失败，仅展示热门想法", error);
+                return null;
+              }),
+          ]);
+          const own = ownThoughtsMatchingRange(mine, chapterUid, range);
+          const hot = parseHotThoughts(result);
+          const thoughts = mergeRangeThoughts(own, hot);
+          this.wereadLog("info", "划线想法已合并", {
             chapterUid,
             range,
-          );
+            own: own.length,
+            hot: hot.length,
+            merged: thoughts.length,
+          });
           webviewView.webview.postMessage({
             command: "WEREAD_BEST_THOUGHTS_DATA",
-            payload: result,
+            payload: { ...result, thoughts, chapterUid, range },
           });
           break;
         }
